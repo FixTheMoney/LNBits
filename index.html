@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>⚡ Lightning QR Drop</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    .lang-toggle {
+      display: inline-flex; align-items: center; gap: 0;
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 999px; padding: 3px; font-size: 0.78rem; font-weight: 700;
+    }
+    .lang-btn {
+      padding: 0.25rem 0.7rem; border-radius: 999px; border: none;
+      background: transparent; color: var(--text3); cursor: pointer;
+      font-family: inherit; font-size: 0.78rem; font-weight: 700;
+      transition: all 0.2s; letter-spacing: 0.5px;
+    }
+    .lang-btn.active { background: var(--accent); color: #fff; box-shadow: 0 2px 8px rgba(247,147,26,0.4); }
+    .lang-btn:hover:not(.active) { color: var(--text); }
+
+    /* ── Claim mode toggle ── */
+    .mode-btn.active {
+      background: var(--accent) !important;
+      border-color: var(--accent) !important;
+      color: #fff !important;
+      box-shadow: 0 2px 8px rgba(247,147,26,0.4) !important;
+    }
+
+    /* ── Manual mode claim button ── */
+    .btn-claimed {
+      background: var(--accent); color: #fff;
+      border: 2px solid var(--accent);
+      font-size: 0.95rem; font-weight: 700;
+      padding: 0.7rem 1.6rem;
+      border-radius: var(--radius-sm);
+      cursor: pointer; transition: all 0.2s;
+      box-shadow: 0 4px 16px rgba(247,147,26,0.35);
+    }
+    .btn-claimed:hover {
+      background: #e8920a; border-color: #e8920a;
+      box-shadow: 0 6px 20px rgba(247,147,26,0.5);
+      transform: translateY(-1px);
+    }
+    .btn-claimed:active { transform: translateY(0); }
+    .btn-claimed:disabled {
+      opacity: 0.45; cursor: not-allowed;
+      transform: none; box-shadow: none;
+    }
+    .top-bar {
+      display: flex; align-items: center; justify-content: flex-end;
+      gap: 0.6rem; margin-bottom: 1rem;
+    }
+    .top-bar-link {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      padding: 0.45rem 1rem; background: var(--surface);
+      border: 1px solid var(--border); border-radius: var(--radius-sm);
+      color: var(--text2); font-size: 0.82rem; font-weight: 500;
+      text-decoration: none; transition: all 0.2s;
+    }
+    .top-bar-link:hover { border-color: var(--accent); color: var(--accent); }
+  </style>
+</head>
+<body>
+
+<!-- ===== SETUP PANEL ===== -->
+<div id="setup-panel" class="panel active">
+  <div class="panel-inner">
+
+    <div class="top-bar">
+      <a href="bulk-send.html" class="top-bar-link">
+        <i class="fas fa-paper-plane"></i>
+        <span>Bulk Send</span>
+      </a>
+      <a href="generate-links.html" class="top-bar-link">
+        <i class="fas fa-link"></i>
+        <span>Generate Links</span>
+      </a>
+      <a href="prepaid-card.html" class="top-bar-link">
+        <i class="fas fa-credit-card"></i>
+        <span>Prepaid Cards</span>
+      </a>
+      <a href="how-it-works.html" class="top-bar-link">
+        <i class="fas fa-diagram-project"></i>
+        <span data-i18n="nav_how_it_works">How It Works</span>
+      </a>
+      <div class="lang-toggle" aria-label="Language selector">
+        <button class="lang-btn active" id="lang-en-btn">EN</button>
+        <button class="lang-btn"        id="lang-ja-btn">JA</button>
+      </div>
+    </div>
+
+    <header class="app-header">
+      <div class="logo-mark">⚡</div>
+      <h1 data-i18n="app_headline">Lightning QR Drop</h1>
+      <p class="subtitle" data-i18n="app_subtitle">Send sats to random recipients — one scan at a time</p>
+    </header>
+
+    <!-- NOTE: no <form> — plain <div> to avoid HTML5 validation blocking buttons -->
+    <div class="setup-form">
+
+      <!-- LNbits Connection -->
+      <section class="form-section">
+        <h2><i class="fas fa-bolt"></i> <span data-i18n="section_lnbits">LNbits Connection</span></h2>
+        <p class="section-desc" data-i18n-html="section_lnbits_desc">Connect your <a href="https://lnbits.com" target="_blank">LNbits</a> wallet.</p>
+
+        <div class="field-group">
+          <label for="lnbits-url" data-i18n="label_lnbits_url">LNbits Instance URL</label>
+          <div class="input-icon-wrap">
+            <i class="fas fa-server"></i>
+            <!-- type="text" not "url" — avoids HTML5 form validation blocking buttons -->
+            <input type="text" id="lnbits-url"
+              placeholder="https://legend.lnbits.com"
+              value="https://legend.lnbits.com"
+              data-i18n-placeholder="placeholder_lnbits_url" />
+          </div>
+          <span class="field-hint" data-i18n="hint_lnbits_url">Use the public demo or your own self-hosted instance</span>
+        </div>
+
+        <div class="field-group">
+          <label for="api-key" data-i18n="label_api_key">LNbits Admin API Key</label>
+          <div class="input-icon-wrap">
+            <i class="fas fa-key"></i>
+            <input type="password" id="api-key"
+              placeholder="Paste your LNbits Admin key here"
+              data-i18n-placeholder="placeholder_api_key"
+              autocomplete="off" />
+            <button type="button" class="toggle-reveal" id="toggle-api-key"><i class="fas fa-eye"></i></button>
+          </div>
+          <span class="field-hint" data-i18n="hint_api_key">Found in LNbits → Wallet → API Info → Admin key</span>
+        </div>
+
+        <div class="field-group">
+          <label for="wallet-id" data-i18n="label_wallet_id">Wallet ID (optional)</label>
+          <div class="input-icon-wrap">
+            <i class="fas fa-wallet"></i>
+            <input type="text" id="wallet-id"
+              placeholder="Auto-detected from API key"
+              data-i18n-placeholder="placeholder_wallet_id"
+              autocomplete="off" />
+          </div>
+          <span class="field-hint" data-i18n="hint_wallet_id">Leave blank to auto-detect from your API key</span>
+        </div>
+
+        <div style="display:flex;gap:0.6rem;align-items:center;flex-wrap:wrap;margin-top:0.5rem;">
+          <button type="button" class="btn btn-secondary" id="test-connection-btn">
+            <i class="fas fa-plug"></i> <span data-i18n="btn_test_connection">Test Connection</span>
+          </button>
+          <button type="button" class="btn btn-secondary" id="test-withdraw-btn">
+            <i class="fas fa-vial"></i> <span data-i18n="btn_test_withdraw">Test Withdraw Ext.</span>
+          </button>
+        </div>
+        <div id="connection-status" class="status-badge hidden"></div>
+        <div id="diag-box" class="hidden" style="margin-top:0.5rem;background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:1rem;font-family:'JetBrains Mono',monospace;font-size:0.73rem;color:var(--text2);white-space:pre-wrap;word-break:break-all;max-height:220px;overflow-y:auto;"></div>
+      </section>
+
+      <!-- Drop Settings -->
+      <section class="form-section">
+        <h2><i class="fas fa-sliders-h"></i> <span data-i18n="section_drop_settings">Drop Settings</span></h2>
+
+        <div class="fields-row">
+          <div class="field-group">
+            <label for="sats-amount" data-i18n="label_sats_amount">Amount per Recipient</label>
+            <div class="input-icon-wrap">
+              <i class="fas fa-coins"></i>
+              <input type="number" id="sats-amount" placeholder="e.g. 1000" min="1" max="1000000" value="100" />
+              <span class="input-suffix">sats</span>
+            </div>
+          </div>
+          <div class="field-group">
+            <label for="total-rounds" data-i18n="label_total_rounds">Number of Recipients</label>
+            <div class="input-icon-wrap">
+              <i class="fas fa-users"></i>
+              <input type="number" id="total-rounds" placeholder="e.g. 5" min="1" max="100" value="5" />
+              <span class="input-suffix">QRs</span>
+            </div>
+            <span class="field-hint" data-i18n="hint_total_rounds">Each QR auto-regenerates after a successful claim</span>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label for="expiry-minutes" data-i18n="label_expiry">QR Expiry (per code)</label>
+          <div class="input-icon-wrap">
+            <i class="fas fa-clock"></i>
+            <input type="number" id="expiry-minutes" placeholder="e.g. 10" min="1" max="1440" value="10" />
+            <span class="input-suffix">min</span>
+          </div>
+          <span class="field-hint" data-i18n="hint_expiry">QR expires if not scanned within this time (then regenerates)</span>
+        </div>
+
+        <div class="field-group">
+          <label for="session-name" data-i18n="label_session_name">Session Name (optional)</label>
+          <div class="input-icon-wrap">
+            <i class="fas fa-tag"></i>
+            <input type="text" id="session-name"
+              placeholder="e.g. Birthday Party Drop"
+              data-i18n-placeholder="placeholder_session_name"
+              maxlength="60" />
+          </div>
+        </div>
+
+        <!-- Poll Interval -->
+        <div class="field-group">
+          <label for="poll-interval" data-i18n="label_poll_interval">Poll Interval</label>
+          <div class="input-icon-wrap">
+            <i class="fas fa-satellite-dish"></i>
+            <input type="number" id="poll-interval" min="1" max="3600" value="3" />
+            <span class="input-suffix">sec</span>
+          </div>
+          <span class="field-hint" data-i18n="hint_poll_interval">How often to check if the QR was scanned (default: 3s)</span>
+        </div>
+
+        <!-- Claim Mode -->
+        <div class="field-group">
+          <label data-i18n="label_claim_mode">Claim Mode</label>
+          <div style="display:flex;gap:0.6rem;align-items:center;flex-wrap:wrap;">
+            <button type="button" class="btn btn-secondary mode-btn active" id="mode-auto-btn">⚡ Auto</button>
+            <button type="button" class="btn btn-secondary mode-btn" id="mode-manual-btn">🖐 Manual</button>
+          </div>
+          <span class="field-hint" id="mode-hint" data-i18n="hint_mode_auto">QR advances automatically when a claim is detected</span>
+        </div>
+      </section>
+
+      <div class="total-cost-bar">
+        <i class="fas fa-calculator"></i>
+        <span data-i18n="total_cost_label">Total Cost:</span>
+        <strong id="total-cost-display">500 sats</strong>
+        <span class="cost-note" id="total-cost-note">across 5 recipients</span>
+      </div>
+
+      <button type="button" class="btn btn-primary btn-launch" id="launch-btn">
+        <i class="fas fa-rocket"></i> <span data-i18n="btn_launch">Launch QR Drop Session</span>
+      </button>
+    </div><!-- end .setup-form div -->
+
+  </div>
+</div>
+
+<!-- ===== ACTIVE DROP PANEL ===== -->
+<div id="drop-panel" class="panel">
+  <div class="panel-inner wide">
+
+    <header class="drop-header">
+      <div class="drop-title">
+        <span class="logo-mark small">⚡</span>
+        <span id="drop-session-name">Lightning QR Drop</span>
+      </div>
+      <div class="progress-bar-wrap">
+        <div class="progress-track">
+          <div class="progress-fill" id="progress-fill"></div>
+        </div>
+        <span id="progress-label">0 / 5 claimed</span>
+      </div>
+      <button type="button" class="btn btn-ghost btn-sm" id="end-session-btn">
+        <i class="fas fa-stop-circle"></i> <span data-i18n="btn_end_session">End Session</span>
+      </button>
+    </header>
+
+    <div class="drop-layout">
+
+      <!-- LEFT: QR Display -->
+      <section class="qr-section" id="qr-section">
+        <div class="qr-status-bar">
+          <span class="status-dot active" id="status-dot"></span>
+          <span id="qr-status-text">Generating...</span>
+          <span class="round-badge" id="round-badge">Round 1</span>
+        </div>
+
+        <div class="qr-card" id="qr-card">
+          <div class="qr-loading" id="qr-loading">
+            <div class="spinner"></div>
+            <p id="qr-loading-text" data-i18n="qr_loading_text">Creating LNURL-Withdraw link...</p>
+          </div>
+          <div id="qr-display" class="qr-display hidden">
+            <div id="qrcode-container"></div>
+            <div class="qr-overlay-label" data-i18n="qr_scan_label">⚡ Scan to claim sats</div>
+          </div>
+          <div class="qr-confirmed hidden" id="qr-confirmed">
+            <div class="confirmed-icon">✅</div>
+            <p class="confirmed-text" data-i18n="confirmed_text">Sats Claimed!</p>
+            <p class="confirmed-sub" data-i18n="confirmed_sub">Generating next QR...</p>
+          </div>
+          <div class="qr-expired hidden" id="qr-expired">
+            <div class="expired-icon">⏱️</div>
+            <p class="expired-text" data-i18n="expired_text">QR Expired</p>
+            <p class="expired-sub" data-i18n="expired_sub">Regenerating...</p>
+          </div>
+          <div class="qr-done hidden" id="qr-done">
+            <div class="done-icon">🎉</div>
+            <p class="done-text" data-i18n="done_text">All Rounds Complete!</p>
+            <p class="done-sub" data-i18n="done_sub">All recipients have received their sats.</p>
+          </div>
+        </div>
+
+        <div class="sats-badge" id="sats-badge">
+          <i class="fas fa-bolt"></i> <span id="drop-sats">100</span> sats
+        </div>
+
+        <div class="countdown-wrap" id="countdown-wrap">
+          <i class="fas fa-hourglass-half"></i>
+          <span data-i18n="expires_in">Expires in:</span>
+          <span class="countdown-timer" id="countdown-timer">10:00</span>
+        </div>
+
+        <div class="lnurl-string-wrap" id="lnurl-string-wrap">
+          <input type="text" id="lnurl-string" readonly />
+          <button type="button" class="btn btn-ghost btn-sm" id="copy-lnurl-btn"><i class="fas fa-copy"></i></button>
+        </div>
+        <span class="field-hint center" id="lnurl-copy-hint" data-i18n="lnurl_copy_hint">Copy the LNURL string if QR won't scan</span>
+
+        <!-- Claim bar: shown always in manual mode, or as fallback in auto mode -->
+        <div id="manual-claim-bar" style="display:none;margin-top:0.8rem;text-align:center;">
+          <div id="manual-mode-badge" style="display:none;margin-bottom:0.5rem;">
+            <span style="display:inline-flex;align-items:center;gap:0.35rem;padding:0.25rem 0.75rem;background:rgba(247,147,26,0.15);border:1px solid var(--accent);border-radius:999px;font-size:0.75rem;font-weight:600;color:var(--accent);">
+              <i class="fas fa-hand-pointer"></i> Manual Mode
+            </span>
+          </div>
+          <button type="button" class="btn btn-claimed" id="mark-claimed-btn">
+            <i class="fas fa-check-circle"></i> <span id="claimed-btn-label">✅ QR was used — Mark as Claimed</span>
+          </button>
+          <div id="poll-debug" style="margin-top:0.5rem;font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--text3);white-space:pre-wrap;word-break:break-all;"></div>
+        </div>
+      </section>
+
+      <!-- RIGHT: Recipient Log -->
+      <aside class="log-section">
+        <h3><i class="fas fa-list-ul"></i> <span data-i18n="log_title">Recipient Log</span></h3>
+        <p class="log-desc" data-i18n="log_desc">Each recipient is logged to prevent duplicate claims.</p>
+
+        <div class="stats-row">
+          <div class="stat-card">
+            <span class="stat-num" id="stat-claimed">0</span>
+            <span class="stat-label" data-i18n="stat_claimed">Claimed</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-num" id="stat-remaining">5</span>
+            <span class="stat-label" data-i18n="stat_remaining">Remaining</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-num" id="stat-expired">0</span>
+            <span class="stat-label" data-i18n="stat_expired">Expired</span>
+          </div>
+        </div>
+
+        <div class="log-table-wrap">
+          <table class="log-table">
+            <thead>
+              <tr>
+                <th data-i18n="log_th_num">#</th>
+                <th data-i18n="log_th_round">Round</th>
+                <th data-i18n="log_th_status">Status</th>
+                <th data-i18n="log_th_claimed_at">Claimed At</th>
+                <th data-i18n="log_th_recipient_id">Recipient ID</th>
+              </tr>
+            </thead>
+            <tbody id="log-tbody">
+              <tr class="log-empty-row">
+                <td colspan="5" data-i18n="log_empty">No claims yet — waiting for first scan...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="blocked-section">
+          <h4><i class="fas fa-ban"></i> <span data-i18n="blocked_title">Blocked Fingerprints</span></h4>
+          <p class="log-desc" data-i18n="blocked_desc">Devices that already claimed sats are blocked from re-scanning.</p>
+          <div id="blocked-list" class="blocked-list">
+            <span class="muted" data-i18n="blocked_none">None blocked yet</span>
+          </div>
+        </div>
+      </aside>
+
+    </div>
+  </div>
+</div>
+
+<!-- ===== SESSION COMPLETE PANEL ===== -->
+<div id="complete-panel" class="panel">
+  <div class="panel-inner narrow center-content">
+    <div class="complete-icon">🎉</div>
+    <h1 data-i18n="complete_title">Drop Complete!</h1>
+    <p class="subtitle" id="complete-subtitle">All 5 recipients received 100 sats each.</p>
+
+    <div class="complete-stats">
+      <div class="stat-card large">
+        <span class="stat-num" id="cs-total-sent">500</span>
+        <span class="stat-label" data-i18n="stat_total_sent">Total Sats Sent</span>
+      </div>
+      <div class="stat-card large">
+        <span class="stat-num" id="cs-recipients">5</span>
+        <span class="stat-label" data-i18n="stat_recipients">Recipients</span>
+      </div>
+      <div class="stat-card large">
+        <span class="stat-num" id="cs-expired">0</span>
+        <span class="stat-label" data-i18n="stat_expired">Expired</span>
+      </div>
+    </div>
+
+    <div class="complete-log-wrap">
+      <h3 data-i18n="complete_log_title">Full Session Log</h3>
+      <div class="log-table-wrap">
+        <table class="log-table">
+          <thead>
+            <tr>
+              <th data-i18n="log_th_num">#</th>
+              <th data-i18n="log_th_round">Round</th>
+              <th data-i18n="log_th_status">Status</th>
+              <th data-i18n="log_th_claimed_at">Claimed At</th>
+              <th data-i18n="log_th_recipient_id">Recipient ID</th>
+            </tr>
+          </thead>
+          <tbody id="complete-log-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <button type="button" class="btn btn-primary" id="new-session-btn">
+      <i class="fas fa-redo"></i> <span data-i18n="btn_new_session">Start New Session</span>
+    </button>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script src="js/app3.js"></script>
+</body>
+</html>

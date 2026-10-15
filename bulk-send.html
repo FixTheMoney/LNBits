@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>⚡ Bulk Lightning Send</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    /* ── Top bar ── */
+    .top-bar {
+      display: flex; align-items: center; justify-content: flex-end;
+      gap: 0.6rem; margin-bottom: 1rem;
+    }
+    .top-bar-link {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      padding: 0.45rem 1rem; background: var(--surface);
+      border: 1px solid var(--border); border-radius: var(--radius-sm);
+      color: var(--text2); font-size: 0.82rem; font-weight: 500;
+      text-decoration: none; transition: all 0.2s;
+    }
+    .top-bar-link:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Page wrapper ── */
+    .page-wrap { position: relative; z-index: 1; min-height: 100vh; padding: 2rem 1rem 4rem; }
+    .page-inner { max-width: 860px; margin: 0 auto; }
+
+    /* ── Recipients table ── */
+    .recipients-table { width: 100%; border-collapse: collapse; }
+    .recipients-table th {
+      text-align: left; font-size: 0.78rem; font-weight: 600;
+      color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px;
+      padding: 0 0.5rem 0.6rem; border-bottom: 1px solid var(--border);
+    }
+    .recipients-table td { padding: 0.4rem 0.5rem; vertical-align: middle; }
+
+    /* row inputs */
+    .row-input {
+      width: 100%; background: var(--bg2); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text); font-size: 0.88rem;
+      font-family: inherit; padding: 0.52rem 0.75rem;
+      transition: border-color 0.2s, box-shadow 0.2s; outline: none;
+    }
+    .row-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(247,147,26,0.12); }
+    .row-input.mono { font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; }
+    .row-input.is-error   { border-color: var(--red)   !important; }
+    .row-input.is-success { border-color: var(--green)  !important; }
+
+    /* autocomplete dropdown */
+    .addr-wrap { position: relative; }
+    .ac-dropdown {
+      position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 200;
+      background: var(--surface2); border: 1px solid var(--border2);
+      border-radius: var(--radius-sm); box-shadow: var(--shadow);
+      max-height: 180px; overflow-y: auto;
+    }
+    .ac-item {
+      display: flex; align-items: center; gap: 0.6rem;
+      padding: 0.5rem 0.75rem; cursor: pointer; font-size: 0.84rem;
+      color: var(--text); transition: background 0.12s;
+    }
+    .ac-item:hover, .ac-item.selected { background: rgba(247,147,26,0.12); }
+    .ac-item .ac-addr { font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: var(--text2); }
+    .ac-item .ac-name { font-weight: 600; font-size: 0.82rem; }
+    .ac-item .ac-badge {
+      margin-left: auto; font-size: 0.72rem; padding: 0.1rem 0.45rem;
+      border-radius: 999px; background: rgba(34,197,94,0.12);
+      color: var(--green); border: 1px solid rgba(34,197,94,0.25);
+      white-space: nowrap;
+    }
+
+    .sats-col { width: 120px; }
+    .status-col { width: 160px; }
+    .row-status {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      font-size: 0.8rem; font-weight: 500; white-space: nowrap;
+    }
+    .row-status.idle    { color: var(--text3); }
+    .row-status.pending { color: var(--lightning); }
+    .row-status.ok      { color: var(--green); }
+    .row-status.fail    { color: var(--red); }
+
+    .remove-col { width: 44px; text-align: center; }
+    .btn-remove {
+      background: none; border: none; cursor: pointer; color: var(--text3);
+      font-size: 1rem; border-radius: 50%; width: 30px; height: 30px;
+      display: inline-flex; align-items: center; justify-content: center;
+      transition: background 0.15s, color 0.15s;
+    }
+    .btn-remove:hover { background: rgba(239,68,68,0.12); color: var(--red); }
+
+    /* ── Totals bar ── */
+    .totals-bar {
+      display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;
+      padding: 0.9rem 1.25rem;
+      background: linear-gradient(135deg, rgba(247,147,26,0.08), rgba(255,215,0,0.04));
+      border: 1px solid rgba(247,147,26,0.25); border-radius: var(--radius-sm);
+      font-size: 0.88rem; color: var(--text2);
+    }
+    .totals-bar span { display: flex; align-items: center; gap: 0.35rem; }
+    .totals-bar strong { font-family: 'JetBrains Mono', monospace; color: var(--lightning); font-weight: 700; }
+    .totals-bar .balance-pill {
+      margin-left: auto; background: var(--surface2); border: 1px solid var(--border2);
+      border-radius: 999px; padding: 0.25rem 0.9rem; font-size: 0.82rem;
+    }
+
+    /* ── Snapshot panel ── */
+    .snapshot-bar {
+      display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;
+    }
+    .snapshot-select {
+      flex: 1; min-width: 160px; background: var(--bg2); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text); font-family: inherit;
+      font-size: 0.88rem; padding: 0.52rem 0.75rem; outline: none;
+      transition: border-color 0.2s;
+    }
+    .snapshot-select:focus { border-color: var(--accent); }
+    .snapshot-name-input {
+      flex: 1; min-width: 140px; background: var(--bg2); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text); font-family: inherit;
+      font-size: 0.88rem; padding: 0.52rem 0.75rem; outline: none;
+      transition: border-color 0.2s;
+    }
+    .snapshot-name-input:focus { border-color: var(--accent); }
+    .snapshot-name-input::placeholder { color: var(--text3); }
+
+    /* ── Address book panel ── */
+    .address-book {
+      display: flex; flex-direction: column; gap: 0;
+      max-height: 260px; overflow-y: auto;
+      border: 1px solid var(--border); border-radius: var(--radius-sm);
+    }
+    .ab-row {
+      display: flex; align-items: center; gap: 0.6rem;
+      padding: 0.55rem 0.9rem; border-bottom: 1px solid var(--border);
+      transition: background 0.12s;
+    }
+    .ab-row:last-child { border-bottom: none; }
+    .ab-row:hover { background: rgba(247,147,26,0.05); }
+    .ab-addr { font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; color: var(--text2); flex: 1; }
+    .ab-name { font-size: 0.8rem; font-weight: 600; color: var(--text); min-width: 90px; }
+    .ab-count {
+      font-size: 0.75rem; padding: 0.1rem 0.5rem; border-radius: 999px;
+      background: rgba(34,197,94,0.1); color: var(--green);
+      border: 1px solid rgba(34,197,94,0.2);
+    }
+    .ab-btn-add {
+      background: none; border: none; cursor: pointer; color: var(--text3);
+      font-size: 0.82rem; padding: 0.2rem 0.5rem; border-radius: var(--radius-sm);
+      transition: all 0.15s; white-space: nowrap;
+    }
+    .ab-btn-add:hover { background: rgba(247,147,26,0.1); color: var(--accent); }
+    .ab-btn-del {
+      background: none; border: none; cursor: pointer; color: var(--text3);
+      font-size: 0.82rem; padding: 0.2rem 0.4rem; border-radius: 50%;
+      transition: all 0.15s;
+    }
+    .ab-btn-del:hover { background: rgba(239,68,68,0.12); color: var(--red); }
+    .ab-empty { padding: 1.2rem; text-align: center; color: var(--text3); font-size: 0.85rem; }
+
+    /* ── Progress log ── */
+    .progress-log {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 1rem 1.2rem;
+      max-height: 220px; overflow-y: auto;
+      font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; line-height: 1.7;
+      color: var(--text2);
+    }
+    .progress-log:empty::before { content: 'Payments will be logged here…'; color: var(--text3); }
+    .log-ok   { color: var(--green); }
+    .log-fail { color: var(--red); }
+    .log-info { color: var(--lightning); }
+    .log-dim  { color: var(--text3); }
+
+    /* ── Summary chips ── */
+    .summary-chips { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+    .chip {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      padding: 0.5rem 1rem; border-radius: 999px; font-size: 0.85rem; font-weight: 600;
+    }
+    .chip-success { background: rgba(34,197,94,0.12); color: var(--green);  border: 1px solid rgba(34,197,94,0.3); }
+    .chip-fail    { background: rgba(239,68,68,0.12);  color: var(--red);    border: 1px solid rgba(239,68,68,0.3); }
+    .chip-total   { background: rgba(247,147,26,0.1);  color: var(--accent); border: 1px solid rgba(247,147,26,0.3); }
+
+    /* ── Action row ── */
+    .action-row { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+    .btn-send-all { padding: 0.8rem 2rem; font-size: 1rem; font-weight: 700; letter-spacing: 0.2px; }
+
+    /* ── API key eye toggle ── */
+    .eye-btn { background: none; border: none; color: var(--text3); cursor: pointer; padding: 0 0.75rem; transition: color 0.2s; }
+    .eye-btn:hover { color: var(--accent); }
+
+    /* ── Collapsible section header ── */
+    .collapsible-header {
+      display: flex; align-items: center; justify-content: space-between;
+      cursor: pointer; user-select: none;
+    }
+    .collapsible-header .toggle-arrow { color: var(--text3); transition: transform 0.2s; font-size: 0.85rem; }
+    .collapsible-header.open .toggle-arrow { transform: rotate(180deg); }
+    .collapsible-body { overflow: hidden; }
+
+    /* toast */
+    #toast-container {
+      position: fixed; bottom: 1.5rem; right: 1.5rem;
+      display: flex; flex-direction: column; gap: 0.5rem;
+      z-index: 9999; pointer-events: none;
+    }
+    .toast {
+      padding: 0.7rem 1.2rem; border-radius: var(--radius-sm);
+      font-size: 0.88rem; font-weight: 500;
+      box-shadow: var(--shadow); pointer-events: auto;
+      animation: slideIn 0.25s ease;
+    }
+    .toast.success { background: var(--green); color: #fff; }
+    .toast.error   { background: var(--red);   color: #fff; }
+    .toast.info    { background: var(--blue);  color: #fff; }
+    @keyframes slideIn { from { opacity:0; transform: translateY(12px); } to { opacity:1; transform: none; } }
+
+    /* ── Modal overlay ── */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0; z-index: 1000;
+      background: rgba(0,0,0,0.65); backdrop-filter: blur(4px);
+      align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-box {
+      background: var(--surface); border: 1px solid var(--border2);
+      border-radius: var(--radius); padding: 1.8rem 2rem; width: 100%; max-width: 420px;
+      box-shadow: var(--shadow);
+    }
+    .modal-box h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 0.4rem; }
+    .modal-box p  { font-size: 0.85rem; color: var(--text2); margin-bottom: 1.2rem; }
+    .modal-input {
+      width: 100%; background: var(--bg2); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text); font-family: inherit;
+      font-size: 0.92rem; padding: 0.65rem 0.9rem; outline: none; margin-bottom: 1.2rem;
+      transition: border-color 0.2s;
+    }
+    .modal-input:focus { border-color: var(--accent); }
+    .modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; }
+  </style>
+</head>
+<body>
+
+<div class="page-wrap">
+  <div class="page-inner">
+
+    <!-- Top nav -->
+    <div class="top-bar">
+      <a href="index.html" class="top-bar-link"><i class="fas fa-bolt"></i> QR Drop</a>
+      <a href="generate-links.html" class="top-bar-link"><i class="fas fa-link"></i> Generate Links</a>
+      <a href="prepaid-card.html" class="top-bar-link"><i class="fas fa-credit-card"></i> Prepaid Cards</a>
+      <a href="how-it-works.html" class="top-bar-link"><i class="fas fa-diagram-project"></i> How It Works</a>
+    </div>
+
+    <!-- Header -->
+    <header class="app-header">
+      <span class="logo-mark">💸</span>
+      <h1>Bulk Lightning Send</h1>
+      <p class="subtitle">Pay multiple Lightning addresses at once using your LNbits wallet</p>
+    </header>
+
+    <!-- ══════════════════════════════════════
+         SECTION 1 — LNbits connection
+    ══════════════════════════════════════ -->
+    <section class="form-section" style="margin-bottom:1.5rem;">
+      <h2 class="section-title">
+        <i class="fas fa-plug" style="color:var(--accent)"></i> LNbits Connection
+      </h2>
+      <p class="section-desc">Enter your LNbits instance URL and Admin API key. Settings are saved locally in your browser.</p>
+
+      <div class="field-group">
+        <label for="lnbits-url">LNbits URL</label>
+        <div class="input-icon-wrap">
+          <i class="fas fa-server"></i>
+          <input type="url" id="lnbits-url" class="row-input" placeholder="https://legend.lnbits.com" />
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label for="api-key">Admin API Key</label>
+        <div class="input-icon-wrap">
+          <i class="fas fa-key"></i>
+          <input type="password" id="api-key" class="row-input" placeholder="Paste your LNbits Admin Key" />
+          <button class="eye-btn" id="toggle-key-vis" title="Show/hide key">
+            <i class="fas fa-eye" id="eye-icon"></i>
+          </button>
+        </div>
+        <span class="field-hint">Only the Admin key can send payments. Never share it.</span>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+        <button type="button" class="btn btn-secondary btn-sm" id="check-balance-btn">
+          <i class="fas fa-wallet"></i> Check Balance
+        </button>
+        <span id="balance-display" class="field-hint" style="font-family:'JetBrains Mono',monospace;"></span>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════
+         SECTION 2 — Snapshots
+    ══════════════════════════════════════ -->
+    <section class="form-section" style="margin-bottom:1.5rem;">
+      <div class="collapsible-header" id="snap-header">
+        <h2 class="section-title" style="margin:0;">
+          <i class="fas fa-camera" style="color:var(--accent)"></i> Snapshots
+        </h2>
+        <i class="fas fa-chevron-down toggle-arrow"></i>
+      </div>
+      <div class="collapsible-body" id="snap-body" style="display:none; padding-top:1rem;">
+        <p class="section-desc" style="margin-bottom:1rem;">
+          Save the current recipient list (addresses + amounts) as a named snapshot. Load a snapshot to instantly restore a previous list.
+        </p>
+        <!-- Save new snapshot -->
+        <div class="snapshot-bar" style="margin-bottom:0.9rem;">
+          <input type="text" id="snapshot-name" class="snapshot-name-input" placeholder="Snapshot name…" maxlength="40" />
+          <button type="button" class="btn btn-secondary btn-sm" id="save-snap-btn">
+            <i class="fas fa-save"></i> Save Snapshot
+          </button>
+        </div>
+        <!-- Load / delete existing -->
+        <div class="snapshot-bar">
+          <select id="snapshot-select" class="snapshot-select">
+            <option value="">— Select a snapshot —</option>
+          </select>
+          <button type="button" class="btn btn-secondary btn-sm" id="load-snap-btn">
+            <i class="fas fa-folder-open"></i> Load
+          </button>
+          <button type="button" class="btn btn-ghost btn-sm" id="del-snap-btn">
+            <i class="fas fa-trash"></i> Delete
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════
+         SECTION 3 — Recipients
+    ══════════════════════════════════════ -->
+    <section class="form-section" style="margin-bottom:1.5rem;">
+      <h2 class="section-title">
+        <i class="fas fa-list" style="color:var(--accent)"></i> Recipients
+      </h2>
+      <p class="section-desc">
+        Add Lightning addresses and amounts. Type to autocomplete from your saved address book.
+        Successful payments are saved automatically. Use <code style="color:var(--accent2)">user@domain.com</code> format.
+      </p>
+
+      <div style="overflow-x:auto;">
+        <table class="recipients-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Lightning Address</th>
+              <th class="sats-col">Sats</th>
+              <th class="status-col">Status</th>
+              <th class="remove-col"></th>
+            </tr>
+          </thead>
+          <tbody id="recipients-body"></tbody>
+        </table>
+      </div>
+
+      <div>
+        <button type="button" class="btn btn-ghost btn-sm" id="add-row-btn">
+          <i class="fas fa-plus"></i> Add Recipient
+        </button>
+      </div>
+
+      <div class="totals-bar">
+        <span><i class="fas fa-users"></i> Recipients: <strong id="total-count">0</strong></span>
+        <span><i class="fas fa-bolt"></i> Total: <strong id="total-sats">0</strong> sats</span>
+        <span id="balance-chip" class="balance-pill" style="display:none;">
+          Balance: <strong id="wallet-sats">–</strong> sats
+        </span>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════
+         SECTION 4 — Address Book
+    ══════════════════════════════════════ -->
+    <section class="form-section" style="margin-bottom:1.5rem;">
+      <div class="collapsible-header" id="ab-header">
+        <h2 class="section-title" style="margin:0;">
+          <i class="fas fa-address-book" style="color:var(--accent)"></i> Address Book
+          <span id="ab-count-badge" style="font-size:0.78rem;color:var(--text3);font-weight:400;margin-left:0.5rem;"></span>
+        </h2>
+        <i class="fas fa-chevron-down toggle-arrow"></i>
+      </div>
+      <div class="collapsible-body" id="ab-body" style="display:none; padding-top:1rem;">
+        <p class="section-desc" style="margin-bottom:0.9rem;">
+          Every Lightning address you successfully pay is saved here automatically.
+          Click <strong>+ Add to list</strong> to copy an address (and optional default amount) into the current recipient table.
+        </p>
+        <div class="address-book" id="address-book-list"></div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════
+         SECTION 5 — Send
+    ══════════════════════════════════════ -->
+    <section class="form-section" id="send-section">
+      <h2 class="section-title">
+        <i class="fas fa-paper-plane" style="color:var(--accent)"></i> Send Payments
+      </h2>
+
+      <div class="action-row">
+        <button type="button" class="btn btn-primary btn-send-all" id="send-all-btn" disabled>
+          <i class="fas fa-bolt"></i> Send to All
+        </button>
+        <button type="button" class="btn btn-ghost btn-sm" id="reset-btn">
+          <i class="fas fa-redo"></i> Reset Statuses
+        </button>
+        <button type="button" class="btn btn-ghost btn-sm" id="clear-all-btn">
+          <i class="fas fa-trash"></i> Clear All
+        </button>
+      </div>
+
+      <div class="summary-chips" id="summary-chips" style="display:none;">
+        <span class="chip chip-success"><i class="fas fa-check-circle"></i> <span id="count-ok">0</span> paid</span>
+        <span class="chip chip-fail"><i class="fas fa-times-circle"></i> <span id="count-fail">0</span> failed</span>
+        <span class="chip chip-total"><i class="fas fa-bolt"></i> <span id="sats-sent">0</span> sats sent</span>
+      </div>
+
+      <div class="field-group">
+        <label>Activity Log</label>
+        <div class="progress-log" id="progress-log"></div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast-container"></div>
+
+<!-- Save-snapshot modal (for overwrite confirm) -->
+<div class="modal-overlay" id="overwrite-modal">
+  <div class="modal-box">
+    <h3>⚠️ Overwrite Snapshot?</h3>
+    <p id="overwrite-msg">A snapshot with this name already exists. Replace it?</p>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost btn-sm" id="overwrite-cancel">Cancel</button>
+      <button type="button" class="btn btn-primary btn-sm" id="overwrite-confirm">Overwrite</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ================================================================
+   Bulk Lightning Send — full app
+   Storage keys:
+     lnbits_url          → string
+     lnbits_api_key      → string
+     bulk_address_book   → JSON: { [address]: { name, lastSats, payCount, lastPaid } }
+     bulk_snapshots      → JSON: [ { id, name, createdAt, rows:[{address,sats}] } ]
+   ================================================================ */
+
+// ── Storage keys ───────────────────────────────────────────────
+const LS_URL  = 'lnbits_url';
+const LS_KEY  = 'lnbits_api_key';
+const LS_AB   = 'bulk_address_book';   // address book
+const LS_SNAP = 'bulk_snapshots';      // snapshots
+
+// ── State ──────────────────────────────────────────────────────
+let rows       = [];   // { id, address, sats, status, statusText }
+let walletSats = null;
+let sending    = false;
+let rowCounter = 0;
+
+// ── DOM helper ─────────────────────────────────────────────────
+function $(id) { return document.getElementById(id); }
+
+// ── Toast ──────────────────────────────────────────────────────
+function toast(msg, type = 'info', dur = 4000) {
+  const el = document.createElement('div');
+  el.className = 'toast ' + type;
+  el.textContent = msg;
+  $('toast-container').appendChild(el);
+  setTimeout(() => el.remove(), dur);
+}
+
+// ── Activity log ───────────────────────────────────────────────
+function log(html) {
+  const box = $('progress-log');
+  const line = document.createElement('div');
+  line.innerHTML = html;
+  box.appendChild(line);
+  box.scrollTop = box.scrollHeight;
+}
+
+// ── Persist LNbits settings ────────────────────────────────────
+function loadSettings() {
+  $('lnbits-url').value = localStorage.getItem(LS_URL) || '';
+  $('api-key').value    = localStorage.getItem(LS_KEY) || '';
+}
+function saveSettings() {
+  localStorage.setItem(LS_URL, $('lnbits-url').value.trim());
+  localStorage.setItem(LS_KEY, $('api-key').value.trim());
+}
+
+// ── Address book ───────────────────────────────────────────────
+function loadAddressBook() {
+  try { return JSON.parse(localStorage.getItem(LS_AB) || '{}'); } catch { return {}; }
+}
+function saveAddressBook(ab) {
+  localStorage.setItem(LS_AB, JSON.stringify(ab));
+}
+
+// Record a successful payment in the address book
+function recordSuccessfulPayment(address, sats) {
+  const ab = loadAddressBook();
+  const entry = ab[address] || { name: address.split('@')[0], lastSats: sats, payCount: 0, lastPaid: null };
+  entry.lastSats = sats;
+  entry.payCount = (entry.payCount || 0) + 1;
+  entry.lastPaid = new Date().toISOString();
+  ab[address] = entry;
+  saveAddressBook(ab);
+  renderAddressBook();
+  renderSnapshots(); // update badge if open
+}
+
+function renderAddressBook() {
+  const ab = loadAddressBook();
+  const entries = Object.entries(ab).sort((a, b) => (b[1].payCount || 0) - (a[1].payCount || 0));
+  const badge = $('ab-count-badge');
+  if (badge) badge.textContent = entries.length ? `(${entries.length})` : '';
+
+  const list = $('address-book-list');
+  list.innerHTML = '';
+  if (entries.length === 0) {
+    list.innerHTML = '<div class="ab-empty">No saved addresses yet. Successful payments will appear here.</div>';
+    return;
+  }
+  entries.forEach(([address, info]) => {
+    const div = document.createElement('div');
+    div.className = 'ab-row';
+    div.innerHTML = `
+      <span class="ab-name">${escHtml(info.name || address.split('@')[0])}</span>
+      <span class="ab-addr">${escHtml(address)}</span>
+      <span class="ab-count" title="${info.payCount} payment${info.payCount !== 1 ? 's' : ''}">
+        ×${info.payCount}
+      </span>
+      <button class="ab-btn-add" data-address="${escHtml(address)}" data-sats="${info.lastSats || ''}" title="Add to recipient list">
+        <i class="fas fa-plus"></i> Add to list
+      </button>
+      <button class="ab-btn-del" data-address="${escHtml(address)}" title="Remove from address book">
+        <i class="fas fa-times"></i>
+      </button>
+    `;
+    list.appendChild(div);
+  });
+
+  list.querySelectorAll('.ab-btn-add').forEach(btn => {
+    btn.addEventListener('click', function () {
+      addRow(this.dataset.address, this.dataset.sats || '');
+      toast(`Added ${this.dataset.address} to list`, 'success', 2500);
+    });
+  });
+  list.querySelectorAll('.ab-btn-del').forEach(btn => {
+    btn.addEventListener('click', function () {
+      const ab = loadAddressBook();
+      delete ab[this.dataset.address];
+      saveAddressBook(ab);
+      renderAddressBook();
+    });
+  });
+}
+
+// ── Snapshots ──────────────────────────────────────────────────
+function loadSnapshots() {
+  try { return JSON.parse(localStorage.getItem(LS_SNAP) || '[]'); } catch { return []; }
+}
+function saveSnapshots(snaps) {
+  localStorage.setItem(LS_SNAP, JSON.stringify(snaps));
+}
+
+function renderSnapshots() {
+  const snaps = loadSnapshots();
+  const sel = $('snapshot-select');
+  const current = sel.value;
+  sel.innerHTML = '<option value="">— Select a snapshot —</option>';
+  snaps.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s.id;
+    const d = new Date(s.createdAt).toLocaleDateString();
+    opt.textContent = `${s.name}  (${s.rows.length} recipients · ${d})`;
+    sel.appendChild(opt);
+  });
+  if (current) sel.value = current;
+}
+
+function saveSnapshot() {
+  const name = $('snapshot-name').value.trim();
+  if (!name) { toast('Enter a snapshot name first.', 'error'); return; }
+  if (rows.length === 0) { toast('No recipients to save.', 'error'); return; }
+
+  const snaps = loadSnapshots();
+  const existing = snaps.find(s => s.name.toLowerCase() === name.toLowerCase());
+  if (existing) {
+    // ask to overwrite
+    $('overwrite-msg').textContent = `A snapshot named "${name}" already exists. Replace it?`;
+    $('overwrite-modal').classList.add('open');
+    $('overwrite-confirm').onclick = function () {
+      $('overwrite-modal').classList.remove('open');
+      doSaveSnapshot(name, snaps, existing.id);
+    };
+    $('overwrite-cancel').onclick = function () {
+      $('overwrite-modal').classList.remove('open');
+    };
+    return;
+  }
+  doSaveSnapshot(name, snaps, null);
+}
+
+function doSaveSnapshot(name, snaps, replaceId) {
+  const snap = {
+    id: replaceId || ('snap_' + Date.now()),
+    name,
+    createdAt: new Date().toISOString(),
+    rows: rows.map(r => ({ address: r.address, sats: r.sats }))
+  };
+  if (replaceId) {
+    const idx = snaps.findIndex(s => s.id === replaceId);
+    snaps[idx] = snap;
+  } else {
+    snaps.unshift(snap);
+  }
+  saveSnapshots(snaps);
+  renderSnapshots();
+  $('snapshot-select').value = snap.id;
+  $('snapshot-name').value = '';
+  toast(`Snapshot "${name}" saved (${snap.rows.length} recipients)`, 'success');
+}
+
+function loadSnapshot() {
+  const id = $('snapshot-select').value;
+  if (!id) { toast('Select a snapshot first.', 'error'); return; }
+  const snaps = loadSnapshots();
+  const snap = snaps.find(s => s.id === id);
+  if (!snap) { toast('Snapshot not found.', 'error'); return; }
+  rows = [];
+  rowCounter = 0;
+  snap.rows.forEach(r => addRow(r.address, r.sats));
+  toast(`Loaded "${snap.name}" — ${snap.rows.length} recipients`, 'success');
+}
+
+function deleteSnapshot() {
+  const id = $('snapshot-select').value;
+  if (!id) { toast('Select a snapshot to delete.', 'error'); return; }
+  const snaps = loadSnapshots();
+  const snap = snaps.find(s => s.id === id);
+  if (!snap) return;
+  if (!confirm(`Delete snapshot "${snap.name}"?`)) return;
+  saveSnapshots(snaps.filter(s => s.id !== id));
+  renderSnapshots();
+  toast(`Snapshot "${snap.name}" deleted.`, 'info');
+}
+
+// ── Collapsible sections ───────────────────────────────────────
+function initCollapsible(headerId, bodyId) {
+  const header = $(headerId);
+  const body   = $(bodyId);
+  header.addEventListener('click', function () {
+    const open = body.style.display !== 'none';
+    body.style.display = open ? 'none' : 'block';
+    header.classList.toggle('open', !open);
+  });
+}
+
+// ── LNbits connection ──────────────────────────────────────────
+function getConn() {
+  return {
+    url: $('lnbits-url').value.trim().replace(/\/$/, ''),
+    key: $('api-key').value.trim()
+  };
+}
+
+async function checkBalance() {
+  const { url, key } = getConn();
+  if (!url || !key) { toast('Enter LNbits URL and API key first.', 'error'); return; }
+  const btn = $('check-balance-btn');
+  btn.disabled = true;
+  $('balance-display').textContent = '⏳ checking…';
+  try {
+    const res = await fetch(`${url}/api/v1/wallet`, { headers: { 'X-Api-Key': key } });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    walletSats = Math.floor(data.balance / 1000);
+    $('balance-display').textContent = `✅ ${walletSats.toLocaleString()} sats`;
+    $('wallet-sats').textContent = walletSats.toLocaleString();
+    $('balance-chip').style.display = '';
+  } catch (e) {
+    $('balance-display').textContent = `❌ ${e.message}`;
+    toast('Balance check failed: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ── Row management ─────────────────────────────────────────────
+function addRow(address = '', sats = '') {
+  const id = ++rowCounter;
+  rows.push({ id, address: String(address), sats: String(sats), status: 'idle', statusText: '—' });
+  renderRows();
+  updateTotals();
+  updateSendBtn();
+}
+
+function removeRow(id) {
+  rows = rows.filter(r => r.id !== id);
+  renderRows();
+  updateTotals();
+  updateSendBtn();
+}
+
+function renderRows() {
+  const tbody = $('recipients-body');
+  tbody.innerHTML = '';
+  rows.forEach((row, idx) => {
+    const tr = document.createElement('tr');
+    const statusCls = row.status === 'ok' ? 'is-success' : row.status === 'fail' ? 'is-error' : '';
+    tr.innerHTML = `
+      <td style="color:var(--text3);font-size:0.8rem;width:28px;">${idx + 1}</td>
+      <td>
+        <div class="addr-wrap">
+          <input type="text"
+            class="row-input mono ${statusCls}"
+            data-id="${row.id}" data-field="address"
+            placeholder="user@domain.com"
+            value="${escHtml(row.address)}"
+            autocomplete="off"
+            ${sending ? 'disabled' : ''} />
+        </div>
+      </td>
+      <td class="sats-col">
+        <input type="number"
+          class="row-input ${statusCls}"
+          data-id="${row.id}" data-field="sats"
+          placeholder="sats" min="1"
+          value="${escHtml(row.sats)}"
+          ${sending ? 'disabled' : ''} />
+      </td>
+      <td class="status-col">
+        <span class="row-status ${row.status}">
+          ${statusIcon(row.status)} ${escHtml(row.statusText)}
+        </span>
+      </td>
+      <td class="remove-col">
+        <button type="button" class="btn-remove" data-id="${row.id}" title="Remove" ${sending ? 'disabled' : ''}>
+          <i class="fas fa-times"></i>
+        </button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  // Bind inputs
+  tbody.querySelectorAll('input[data-field="address"]').forEach(inp => {
+    inp.addEventListener('input', function () {
+      const r = rows.find(x => x.id == this.dataset.id);
+      if (r) { r.address = this.value; updateTotals(); updateSendBtn(); }
+      showAutocomplete(this);
+    });
+    inp.addEventListener('focus', function () { showAutocomplete(this); });
+    inp.addEventListener('blur', function () {
+      // small delay so click on dropdown registers
+      setTimeout(() => closeAllDropdowns(), 150);
+    });
+  });
+
+  tbody.querySelectorAll('input[data-field="sats"]').forEach(inp => {
+    inp.addEventListener('input', function () {
+      const r = rows.find(x => x.id == this.dataset.id);
+      if (r) { r.sats = this.value; updateTotals(); updateSendBtn(); }
+    });
+  });
+
+  tbody.querySelectorAll('.btn-remove').forEach(btn => {
+    btn.addEventListener('click', function () { removeRow(parseInt(this.dataset.id)); });
+  });
+}
+
+// ── Autocomplete dropdown ──────────────────────────────────────
+function showAutocomplete(input) {
+  closeAllDropdowns();
+  const query = input.value.toLowerCase().trim();
+  const ab = loadAddressBook();
+  const entries = Object.entries(ab);
+  const matches = query
+    ? entries.filter(([addr, info]) =>
+        addr.toLowerCase().includes(query) ||
+        (info.name || '').toLowerCase().includes(query))
+    : entries;
+
+  if (matches.length === 0) return;
+
+  const wrap = input.closest('.addr-wrap');
+  const drop = document.createElement('div');
+  drop.className = 'ac-dropdown';
+  drop.id = 'ac-drop-' + input.dataset.id;
+
+  matches.slice(0, 8).forEach(([address, info]) => {
+    const item = document.createElement('div');
+    item.className = 'ac-item';
+    item.innerHTML = `
+      <span class="ac-name">${escHtml(info.name || address.split('@')[0])}</span>
+      <span class="ac-addr">${escHtml(address)}</span>
+      <span class="ac-badge">×${info.payCount || 0}</span>
+    `;
+    item.addEventListener('mousedown', function (e) {
+      e.preventDefault();
+      const rowId = parseInt(input.dataset.id);
+      const r = rows.find(x => x.id === rowId);
+      if (r) {
+        r.address = address;
+        if (!r.sats && info.lastSats) r.sats = String(info.lastSats);
+      }
+      renderRows();
+      updateTotals();
+      updateSendBtn();
+      closeAllDropdowns();
+    });
+    drop.appendChild(item);
+  });
+
+  wrap.appendChild(drop);
+}
+
+function closeAllDropdowns() {
+  document.querySelectorAll('.ac-dropdown').forEach(d => d.remove());
+}
+
+// ── Utilities ──────────────────────────────────────────────────
+function statusIcon(status) {
+  return {
+    idle:    '<i class="fas fa-minus-circle"></i>',
+    pending: '<i class="fas fa-spinner fa-spin"></i>',
+    ok:      '<i class="fas fa-check-circle"></i>',
+    fail:    '<i class="fas fa-times-circle"></i>',
+  }[status] || '';
+}
+
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function updateTotals() {
+  const total = rows.reduce((s, r) => s + (parseInt(r.sats) || 0), 0);
+  $('total-count').textContent = rows.length;
+  $('total-sats').textContent  = total.toLocaleString();
+}
+
+function updateSendBtn() {
+  const hasRows  = rows.length > 0;
+  const allValid = rows.every(r => r.address.trim() && parseInt(r.sats) > 0);
+  $('send-all-btn').disabled = sending || !hasRows || !allValid;
+}
+
+// ── Lightning address resolution ───────────────────────────────
+async function resolveLightningAddress(address) {
+  const at = address.lastIndexOf('@');
+  if (at < 1) throw new Error('Invalid Lightning address format');
+  const user   = address.slice(0, at);
+  const domain = address.slice(at + 1);
+  const metaRes = await fetch(`https://${domain}/.well-known/lnurlp/${user}`);
+  if (!metaRes.ok) throw new Error(`LNURL fetch failed (${metaRes.status})`);
+  const meta = await metaRes.json();
+  if (meta.status === 'ERROR') throw new Error(meta.reason || 'LNURL error');
+  return meta;
+}
+
+async function getInvoice(meta, sats) {
+  const msats = sats * 1000;
+  if (msats < meta.minSendable) throw new Error(`Min ${meta.minSendable / 1000} sats`);
+  if (msats > meta.maxSendable) throw new Error(`Max ${meta.maxSendable / 1000} sats`);
+  const sep = meta.callback.includes('?') ? '&' : '?';
+  const res = await fetch(`${meta.callback}${sep}amount=${msats}`);
+  if (!res.ok) throw new Error(`Invoice request failed (${res.status})`);
+  const cb = await res.json();
+  if (cb.status === 'ERROR') throw new Error(cb.reason || 'Invoice error');
+  if (!cb.pr) throw new Error('No bolt11 in response');
+  return cb.pr;
+}
+
+async function payInvoice(bolt11, url, key) {
+  const res = await fetch(`${url}/api/v1/payments`, {
+    method: 'POST',
+    headers: { 'X-Api-Key': key, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ out: true, bolt11 })
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.detail || data.message || `HTTP ${res.status}`);
+  return data;
+}
+
+// ── Send all ───────────────────────────────────────────────────
+async function sendAll() {
+  if (sending) return;
+  const { url, key } = getConn();
+  if (!url || !key) { toast('Enter LNbits URL and API key first.', 'error'); return; }
+
+  const invalids = rows.filter(r => !r.address.trim() || !(parseInt(r.sats) > 0));
+  if (invalids.length) { toast('Fill in all addresses and amounts first.', 'error'); return; }
+
+  sending = true;
+  updateSendBtn();
+  renderRows();
+  $('progress-log').innerHTML = '';
+  $('summary-chips').style.display = 'none';
+  saveSettings();
+
+  let okCount = 0, failCount = 0, satsSent = 0;
+  log(`<span class="log-info">⚡ Starting ${rows.length} payment${rows.length !== 1 ? 's' : ''}…</span>`);
+
+  for (const row of rows) {
+    row.status = 'pending'; row.statusText = 'Resolving…'; renderRows();
+    const sats = parseInt(row.sats);
+    const addr = row.address.trim();
+    try {
+      log(`<span class="log-dim">[${escHtml(addr)}]</span> Resolving…`);
+      const meta = await resolveLightningAddress(addr);
+
+      row.statusText = 'Getting invoice…'; renderRows();
+      log(`<span class="log-dim">[${escHtml(addr)}]</span> Getting invoice for ${sats} sats…`);
+      const bolt11 = await getInvoice(meta, sats);
+
+      row.statusText = 'Paying…'; renderRows();
+      log(`<span class="log-dim">[${escHtml(addr)}]</span> Paying…`);
+      await payInvoice(bolt11, url, key);
+
+      row.status = 'ok';
+      row.statusText = `✓ ${sats.toLocaleString()} sats`;
+      okCount++; satsSent += sats;
+      log(`<span class="log-ok">✅ [${escHtml(addr)}] Paid ${sats.toLocaleString()} sats</span>`);
+
+      // ← Save to address book on success
+      recordSuccessfulPayment(addr, sats);
+
+    } catch (err) {
+      row.status = 'fail';
+      row.statusText = err.message.slice(0, 40);
+      failCount++;
+      log(`<span class="log-fail">❌ [${escHtml(addr)}] ${escHtml(err.message)}</span>`);
+    }
+    renderRows();
+    await new Promise(r => setTimeout(r, 400));
+  }
+
+  log(`<span class="log-info">──────────────────────────────</span>`);
+  log(`<span class="log-info">Done — ${okCount} paid, ${failCount} failed, ${satsSent.toLocaleString()} sats sent.</span>`);
+
+  $('count-ok').textContent   = okCount;
+  $('count-fail').textContent = failCount;
+  $('sats-sent').textContent  = satsSent.toLocaleString();
+  $('summary-chips').style.display = 'flex';
+
+  toast(`${okCount} paid, ${failCount} failed`, okCount > 0 ? 'success' : 'error');
+  if (walletSats !== null) checkBalance();
+
+  sending = false;
+  updateSendBtn();
+  renderRows();
+}
+
+// ── Reset / Clear ──────────────────────────────────────────────
+function resetStatuses() {
+  rows.forEach(r => { r.status = 'idle'; r.statusText = '—'; });
+  renderRows(); updateSendBtn();
+  $('summary-chips').style.display = 'none';
+  $('progress-log').innerHTML = '';
+}
+
+function clearAll() {
+  if (rows.length === 0) return;
+  if (!confirm('Remove all recipients?')) return;
+  rows = []; rowCounter = 0;
+  renderRows(); updateTotals(); updateSendBtn();
+  $('summary-chips').style.display = 'none';
+  $('progress-log').innerHTML = '';
+}
+
+// ── Key visibility toggle ──────────────────────────────────────
+function toggleKeyVis() {
+  const inp  = $('api-key');
+  const icon = $('eye-icon');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+  icon.className = inp.type === 'password' ? 'fas fa-eye' : 'fas fa-eye-slash';
+}
+
+// ── Boot ───────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function () {
+  loadSettings();
+  renderAddressBook();
+  renderSnapshots();
+  initCollapsible('snap-header', 'snap-body');
+  initCollapsible('ab-header',  'ab-body');
+
+  // Settings persistence
+  $('lnbits-url').addEventListener('input', saveSettings);
+  $('api-key').addEventListener('input', saveSettings);
+
+  // Buttons
+  $('toggle-key-vis').addEventListener('click', toggleKeyVis);
+  $('check-balance-btn').addEventListener('click', checkBalance);
+  $('add-row-btn').addEventListener('click', function () { addRow(); });
+  $('send-all-btn').addEventListener('click', sendAll);
+  $('reset-btn').addEventListener('click', resetStatuses);
+  $('clear-all-btn').addEventListener('click', clearAll);
+  $('save-snap-btn').addEventListener('click', saveSnapshot);
+  $('load-snap-btn').addEventListener('click', loadSnapshot);
+  $('del-snap-btn').addEventListener('click', deleteSnapshot);
+
+  // Start with 3 empty rows
+  addRow(); addRow(); addRow();
+});
+</script>
+</body>
+</html>

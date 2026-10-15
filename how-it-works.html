@@ -1,0 +1,1526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>⚡ How It Works — Lightning QR Drop</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0d0d14;
+      --bg2:       #13131f;
+      --bg3:       #1a1a2e;
+      --surface:   #1e1e32;
+      --surface2:  #25253d;
+      --border:    #2e2e4e;
+      --border2:   #3d3d60;
+      --accent:    #f7931a;
+      --accent2:   #ffb347;
+      --lightning: #ffd700;
+      --green:     #22c55e;
+      --red:       #ef4444;
+      --blue:      #3b82f6;
+      --purple:    #a855f7;
+      --teal:      #14b8a6;
+      --text:      #e8e8f0;
+      --text2:     #9898b8;
+      --text3:     #5a5a7a;
+      --radius:    14px;
+      --radius-sm: 8px;
+      --shadow:    0 8px 32px rgba(0,0,0,0.5);
+    }
+
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(247,147,26,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(247,147,26,0.025) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .page-wrap {
+      position: relative;
+      z-index: 1;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 2rem 1.25rem 6rem;
+    }
+
+    /* ── Nav ── */
+    .top-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 2.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border);
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+    .nav-brand {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--lightning);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    .btn-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.5rem 1rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text2);
+      font-size: 0.85rem;
+      font-weight: 500;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+    .btn-back:hover { color: var(--accent); border-color: var(--accent); }
+
+    /* ── Language Toggle ── */
+    .lang-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 0;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 3px;
+    }
+    .lang-btn {
+      padding: 0.25rem 0.7rem;
+      border-radius: 999px;
+      border: none;
+      background: transparent;
+      color: var(--text3);
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.78rem;
+      font-weight: 700;
+      transition: all 0.2s;
+      letter-spacing: 0.5px;
+    }
+    .lang-btn.active { background: var(--accent); color: #fff; box-shadow: 0 2px 8px rgba(247,147,26,0.4); }
+    .lang-btn:hover:not(.active) { color: var(--text); }
+
+    /* ── Page Header ── */
+    .page-header {
+      text-align: center;
+      margin-bottom: 3.5rem;
+    }
+    .page-header h1 {
+      font-size: 2.4rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--lightning), var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -0.5px;
+      margin-bottom: 0.75rem;
+    }
+    .page-header p {
+      color: var(--text2);
+      font-size: 1.05rem;
+      max-width: 660px;
+      margin: 0 auto;
+      line-height: 1.7;
+    }
+
+    /* ── Section titles ── */
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1.75rem;
+    }
+    .section-title .icon-badge {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      flex-shrink: 0;
+    }
+    .section-title h2 { font-size: 1.3rem; font-weight: 700; }
+    .section-title p  { font-size: 0.85rem; color: var(--text3); margin-top: 0.1rem; }
+
+    .section-divider { border: none; border-top: 1px solid var(--border); margin: 3.5rem 0; }
+
+    /* ── Architecture cards ── */
+    .arch-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    .arch-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.4rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+    .arch-card:hover { border-color: var(--border2); transform: translateY(-2px); }
+    .arch-card-icon {
+      font-size: 2rem;
+      width: 52px;
+      height: 52px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .arch-card h3 { font-size: 0.95rem; font-weight: 700; }
+    .arch-card p  { font-size: 0.82rem; color: var(--text2); line-height: 1.6; }
+    .arch-card .tag-row { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: auto; }
+
+    .tag {
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .tag.orange { background: rgba(247,147,26,0.15); color: var(--accent);    border: 1px solid rgba(247,147,26,0.25); }
+    .tag.yellow { background: rgba(255,215,0,0.12);  color: var(--lightning); border: 1px solid rgba(255,215,0,0.2); }
+    .tag.green  { background: rgba(34,197,94,0.12);  color: var(--green);     border: 1px solid rgba(34,197,94,0.2); }
+    .tag.red    { background: rgba(239,68,68,0.12);  color: var(--red);       border: 1px solid rgba(239,68,68,0.2); }
+    .tag.blue   { background: rgba(59,130,246,0.12); color: var(--blue);      border: 1px solid rgba(59,130,246,0.2); }
+    .tag.purple { background: rgba(168,85,247,0.12); color: var(--purple);    border: 1px solid rgba(168,85,247,0.2); }
+    .tag.teal   { background: rgba(20,184,166,0.12); color: var(--teal);      border: 1px solid rgba(20,184,166,0.2); }
+
+    /* ── Flow controls ── */
+    .flow-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+    .flow-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.55rem 1.1rem;
+      border-radius: var(--radius-sm);
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text2);
+      transition: all 0.2s;
+    }
+    .flow-btn:hover, .flow-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .flow-btn.play {
+      background: linear-gradient(135deg, var(--accent), #e67e00);
+      color: #fff;
+      border-color: transparent;
+      box-shadow: 0 4px 14px rgba(247,147,26,0.35);
+    }
+    .flow-btn.play:hover { transform: translateY(-1px); }
+    .flow-speed {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.8rem;
+      color: var(--text3);
+    }
+    .speed-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text2);
+      padding: 0.25rem 0.6rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.2s;
+    }
+    .speed-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+    /* ── Step pills ── */
+    .step-progress {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      margin-bottom: 2rem;
+      overflow-x: auto;
+      padding-bottom: 0.5rem;
+    }
+    .step-pill {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.4rem 0.9rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text3);
+      white-space: nowrap;
+      transition: all 0.3s;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .step-pill:hover { border-color: var(--border2); color: var(--text2); }
+    .step-pill.active { background: rgba(247,147,26,0.15); border-color: var(--accent); color: var(--accent); }
+    .step-pill.done   { background: rgba(34,197,94,0.1);   border-color: rgba(34,197,94,0.3); color: var(--green); }
+    .step-pill .pill-num {
+      width: 18px; height: 18px; border-radius: 50%;
+      background: var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.65rem; font-weight: 700; flex-shrink: 0;
+    }
+    .step-pill.active .pill-num { background: var(--accent); color: #fff; }
+    .step-pill.done .pill-num   { background: var(--green);  color: #fff; }
+    .step-connector { width: 28px; height: 2px; background: var(--border); flex-shrink: 0; transition: background 0.3s; }
+    .step-connector.done { background: var(--green); }
+
+    /* ── Flow diagram ── */
+    .flow-diagram {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem;
+      min-height: 400px;
+      position: relative;
+      overflow: hidden;
+    }
+    .flow-scene { display: none; animation: scene-in 0.4s ease; }
+    .flow-scene.active { display: block; }
+    @keyframes scene-in {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .actors-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+    }
+    .actor {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      flex: 1;
+      min-width: 100px;
+      max-width: 140px;
+      transition: all 0.3s;
+    }
+    .actor-avatar {
+      width: 64px; height: 64px; border-radius: 16px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.8rem;
+      border: 2px solid var(--border);
+      background: var(--bg2);
+      transition: all 0.3s;
+    }
+    .actor-avatar.highlight        { border-color: var(--accent);  box-shadow: 0 0 20px rgba(247,147,26,0.35); background: rgba(247,147,26,0.08); }
+    .actor-avatar.highlight-green  { border-color: var(--green);   box-shadow: 0 0 20px rgba(34,197,94,0.3);   background: rgba(34,197,94,0.06); }
+    .actor-avatar.highlight-red    { border-color: var(--red);     box-shadow: 0 0 20px rgba(239,68,68,0.3);   background: rgba(239,68,68,0.06); }
+    .actor-avatar.highlight-blue   { border-color: var(--blue);    box-shadow: 0 0 20px rgba(59,130,246,0.3);  background: rgba(59,130,246,0.06); }
+    .actor-avatar.highlight-purple { border-color: var(--purple);  box-shadow: 0 0 20px rgba(168,85,247,0.3);  background: rgba(168,85,247,0.08); }
+    .actor-name  { font-size: 0.8rem;  font-weight: 600; text-align: center; color: var(--text2); }
+    .actor-label { font-size: 0.7rem;  color: var(--text3); text-align: center; }
+
+    /* ── Messages ── */
+    .flow-messages { display: flex; flex-direction: column; gap: 0.75rem; }
+    .msg {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      padding: 0.9rem 1.1rem;
+      border-radius: var(--radius-sm);
+      border-left: 3px solid var(--border);
+      background: var(--bg2);
+      font-size: 0.85rem;
+      line-height: 1.5;
+      animation: msg-in 0.3s ease both;
+    }
+    @keyframes msg-in { from { opacity:0; transform:translateX(-8px); } to { opacity:1; transform:translateX(0); } }
+    .msg.delay-1 { animation-delay: 0.1s; }
+    .msg.delay-2 { animation-delay: 0.2s; }
+    .msg.delay-3 { animation-delay: 0.3s; }
+    .msg.api    { border-left-color: var(--accent); }
+    .msg.wallet { border-left-color: var(--blue); }
+    .msg.qr     { border-left-color: var(--lightning); }
+    .msg.check  { border-left-color: var(--teal); }
+    .msg.block  { border-left-color: var(--red); }
+    .msg.ok     { border-left-color: var(--green); }
+    .msg.regen  { border-left-color: var(--purple); }
+    .msg.info   { border-left-color: var(--border2); }
+    .msg-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 1px; }
+    .msg-body strong { display: block; font-size: 0.82rem; color: var(--text); margin-bottom: 0.2rem; }
+    .msg-body span   { font-size: 0.8rem; color: var(--text2); }
+    .msg-body code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      background: var(--surface2);
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      color: var(--accent2);
+    }
+    .arrow-line {
+      height: 2px; flex: 1; max-width: 80px;
+      background: linear-gradient(90deg, var(--accent), transparent);
+      border-radius: 2px; position: relative; overflow: hidden;
+    }
+    .arrow-line::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(90deg, transparent, rgba(255,215,0,0.8), transparent);
+      animation: shimmer 1.5s infinite;
+    }
+    @keyframes shimmer { 0% { transform:translateX(-100%); } 100% { transform:translateX(100%); } }
+
+    .step-caption { text-align: center; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
+    .step-caption h3 { font-size: 1.05rem; font-weight: 700; color: var(--text); margin-bottom: 0.4rem; }
+    .step-caption p  { font-size: 0.85rem; color: var(--text2); max-width: 560px; margin: 0 auto; line-height: 1.6; }
+
+    /* ── Anti fraud ── */
+    .anti-fraud-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 2rem; }
+    .fraud-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.4rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .fraud-card .card-head { display: flex; align-items: center; gap: 0.6rem; font-size: 0.9rem; font-weight: 700; }
+    .fraud-card p { font-size: 0.83rem; color: var(--text2); line-height: 1.65; }
+    .fraud-card .detail-list { list-style: none; display: flex; flex-direction: column; gap: 0.5rem; }
+    .fraud-card .detail-list li { display: flex; align-items: flex-start; gap: 0.5rem; font-size: 0.82rem; color: var(--text2); line-height: 1.5; }
+    .fraud-card .detail-list li::before { content: '▸'; color: var(--accent); flex-shrink: 0; margin-top: 1px; }
+    .fraud-card .detail-list code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      background: var(--surface2);
+      padding: 0.1rem 0.35rem;
+      border-radius: 3px;
+      color: var(--accent2);
+    }
+
+    /* ── Scenarios ── */
+    .scenario-tabs { display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+    .scenario-tab {
+      padding: 0.5rem 1.1rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text3);
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+    .scenario-tab.active       { background: var(--surface2); color: var(--text); border-color: var(--border2); }
+    .scenario-tab.green-tab.active { background: rgba(34,197,94,0.12); color: var(--green); border-color: rgba(34,197,94,0.3); }
+    .scenario-tab.red-tab.active   { background: rgba(239,68,68,0.12);  color: var(--red);   border-color: rgba(239,68,68,0.3); }
+    .scenario-panel { display: none; }
+    .scenario-panel.active { display: block; animation: scene-in 0.3s ease; }
+    .scenario-flow {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+    .flow-step { display: flex; align-items: flex-start; gap: 0.75rem; }
+    .flow-step-num {
+      width: 24px; height: 24px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.7rem; font-weight: 700; flex-shrink: 0; margin-top: 1px;
+    }
+    .flow-step-body { flex: 1; }
+    .flow-step-body strong { display: block; font-size: 0.83rem; color: var(--text); margin-bottom: 0.15rem; }
+    .flow-step-body span   { font-size: 0.78rem; color: var(--text2); }
+    .flow-step-body code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      background: var(--surface2);
+      padding: 0.1rem 0.35rem;
+      border-radius: 3px;
+      color: var(--accent2);
+    }
+    .flow-step-arrow { width: 2px; height: 16px; background: var(--border); margin-left: 11px; }
+    .outcome-banner {
+      border-radius: var(--radius-sm);
+      padding: 0.9rem 1.1rem;
+      display: flex; align-items: center; gap: 0.6rem;
+      font-size: 0.85rem; font-weight: 600; margin-top: 0.5rem;
+    }
+    .outcome-banner.ok  { background: rgba(34,197,94,0.1);  color: var(--green); border: 1px solid rgba(34,197,94,0.25); }
+    .outcome-banner.bad { background: rgba(239,68,68,0.1);  color: var(--red);   border: 1px solid rgba(239,68,68,0.25); }
+
+    /* ── Spec table ── */
+    .spec-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    .spec-table th {
+      background: var(--bg3);
+      color: var(--text3);
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.72rem;
+      letter-spacing: 0.5px;
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    .spec-table td { padding: 0.8rem 1rem; border-bottom: 1px solid var(--border); color: var(--text2); vertical-align: top; line-height: 1.5; }
+    .spec-table tr:last-child td { border-bottom: none; }
+    .spec-table tr:hover td { background: rgba(247,147,26,0.03); }
+    .spec-table td:first-child { font-weight: 600; color: var(--text); white-space: nowrap; }
+    .spec-table td code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+      background: var(--surface2);
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+      color: var(--accent2);
+    }
+    .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+
+    /* ── LNURL anatomy ── */
+    .lnurl-anatomy { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.75rem; }
+    .lnurl-anatomy .code-block {
+      background: var(--bg);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius-sm);
+      padding: 1.25rem 1.5rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      color: var(--text2);
+      overflow-x: auto;
+      line-height: 1.7;
+      margin-bottom: 1.25rem;
+    }
+    .code-block .k  { color: var(--purple); }
+    .code-block .s  { color: var(--green); }
+    .code-block .n  { color: var(--lightning); }
+    .code-block .c  { color: var(--accent); }
+    .code-block .cm { color: var(--text3); font-style: italic; }
+    .field-annotations { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+    .annotation {
+      display: flex; gap: 0.6rem; align-items: flex-start;
+      padding: 0.75rem;
+      background: var(--bg2);
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+    }
+    .annotation .ann-key {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--accent2);
+      flex-shrink: 0;
+      padding-top: 1px;
+    }
+    .annotation .ann-desc { font-size: 0.78rem; color: var(--text2); line-height: 1.5; }
+    .annotation .ann-desc strong { color: var(--text); font-weight: 600; }
+
+    /* ── Sequence diagram ── */
+    .seq-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.75rem; overflow-x: auto; }
+    .seq-diagram { min-width: 700px; }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg2); }
+    ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+    /* ── Responsive ── */
+    @media (max-width: 768px) {
+      .arch-grid { grid-template-columns: 1fr; }
+      .anti-fraud-grid { grid-template-columns: 1fr; }
+      .field-annotations { grid-template-columns: 1fr; }
+      .actors-row { justify-content: center; }
+      .flow-speed { margin-left: 0; }
+      .page-header h1 { font-size: 1.8rem; }
+    }
+    @media (max-width: 500px) {
+      .step-progress { gap: 0; }
+      .step-connector { width: 12px; }
+    }
+  </style>
+</head>
+<body data-page-title="page_title_hiw">
+
+<div class="page-wrap">
+
+  <!-- ── Nav ── -->
+  <nav class="top-nav">
+    <a href="index.html" class="nav-brand" data-i18n="nav_brand">⚡ Lightning QR Drop</a>
+    <div class="nav-right">
+      <a href="index.html" class="btn-back">
+        <i class="fas fa-arrow-left"></i>
+        <span data-i18n="nav_back_to_app">Back to App</span>
+      </a>
+      <div class="lang-toggle" aria-label="Language selector">
+        <button class="lang-btn active" id="lang-en-btn" onclick="setLang('en')">EN</button>
+        <button class="lang-btn" id="lang-ja-btn" onclick="setLang('ja')">JA</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ── Header ── -->
+  <header class="page-header">
+    <h1 data-i18n="hiw_title">How It Works</h1>
+    <p data-i18n="hiw_subtitle">A visual walkthrough of the full payment flow — from QR generation to sats delivery — and how the system prevents recipients from claiming more than once.</p>
+  </header>
+
+  <!-- ══ SECTION 1 — Architecture ══ -->
+  <div class="section-title">
+    <div class="icon-badge" style="background:rgba(247,147,26,0.12);">🏗️</div>
+    <div>
+      <h2 data-i18n="arch_section_title">System Architecture</h2>
+      <p data-i18n="arch_section_sub">Three actors, one protocol — no intermediaries</p>
+    </div>
+  </div>
+
+  <div class="arch-grid">
+    <div class="arch-card">
+      <div class="arch-card-icon" style="background:rgba(255,215,0,0.1);">🧑‍💻</div>
+      <h3 data-i18n="arch_card1_title">You (The Sender)</h3>
+      <p data-i18n-html="arch_card1_body">You configure the drop: amount per recipient, number of rounds, and expiry time. Your LNbits wallet funds every withdrawal. You never share your private keys — only your LNbits Admin API key is used.</p>
+      <div class="tag-row">
+        <span class="tag orange">LNbits Admin Key</span>
+        <span class="tag yellow">This Browser</span>
+      </div>
+    </div>
+    <div class="arch-card">
+      <div class="arch-card-icon" style="background:rgba(247,147,26,0.1);">⚡</div>
+      <h3 data-i18n="arch_card2_title">LNbits (Your Node)</h3>
+      <p data-i18n-html="arch_card2_body">Your LNbits instance manages the LNURL-withdraw links. It enforces the <code>uses: 1</code> constraint at the protocol level — ensuring each link can only ever be redeemed once, regardless of how many times the QR is scanned.</p>
+      <div class="tag-row">
+        <span class="tag orange">LNURL-withdraw</span>
+        <span class="tag green">uses=1 enforcement</span>
+      </div>
+    </div>
+    <div class="arch-card">
+      <div class="arch-card-icon" style="background:rgba(34,197,94,0.1);">📱</div>
+      <h3 data-i18n="arch_card3_title">Recipients</h3>
+      <p data-i18n="arch_card3_body">Each recipient scans the QR with any Lightning-compatible wallet (Phoenix, Breez, Wallet of Satoshi, etc.). Their wallet fetches the LNURL callback, constructs a payment invoice, and receives sats automatically.</p>
+      <div class="tag-row">
+        <span class="tag green">Any LN Wallet</span>
+        <span class="tag blue">LNURL-withdraw</span>
+        <span class="tag teal">One-time only</span>
+      </div>
+    </div>
+  </div>
+
+  <hr class="section-divider" />
+
+  <!-- ══ SECTION 2 — Animated Flow ══ -->
+  <div class="section-title">
+    <div class="icon-badge" style="background:rgba(59,130,246,0.12);">🎬</div>
+    <div>
+      <h2 data-i18n="flow_section_title">Step-by-Step Payment Flow</h2>
+      <p data-i18n="flow_section_sub">Click through each step or hit Auto-Play to animate the full flow</p>
+    </div>
+  </div>
+
+  <div class="flow-controls">
+    <button class="flow-btn play" id="play-btn" onclick="toggleAutoPlay()">
+      <i class="fas fa-play" id="play-icon"></i>
+      <span id="play-btn-label" data-i18n="btn_autoplay">Auto-Play</span>
+    </button>
+    <button class="flow-btn" id="prev-btn" onclick="stepFlow(-1)">
+      <i class="fas fa-chevron-left"></i> <span data-i18n="btn_prev">Prev</span>
+    </button>
+    <button class="flow-btn" id="next-btn" onclick="stepFlow(1)">
+      <span data-i18n="btn_next">Next</span> <i class="fas fa-chevron-right"></i>
+    </button>
+    <button class="flow-btn" onclick="resetFlow()">
+      <i class="fas fa-redo"></i> <span data-i18n="btn_reset">Reset</span>
+    </button>
+    <div class="flow-speed">
+      <span data-i18n="speed_label">Speed:</span>
+      <button class="speed-btn" data-speed="2000" onclick="setSpeed(this)" data-i18n="speed_slow">Slow</button>
+      <button class="speed-btn active" data-speed="1200" onclick="setSpeed(this)" data-i18n="speed_normal">Normal</button>
+      <button class="speed-btn" data-speed="600" onclick="setSpeed(this)" data-i18n="speed_fast">Fast</button>
+    </div>
+  </div>
+
+  <div class="step-progress" id="step-progress"></div>
+
+  <div class="flow-diagram" id="flow-diagram">
+
+    <!-- Scene 0: Setup -->
+    <div class="flow-scene active" data-scene="0">
+      <div class="actors-row">
+        <div class="actor">
+          <div class="actor-avatar highlight">🧑‍💻</div>
+          <div class="actor-name" data-i18n="s0_actor_you">You</div>
+          <div class="actor-label" data-i18n="s0_actor_you_label">Sender / Admin</div>
+        </div>
+        <div class="actor">
+          <div class="actor-avatar">⚡</div>
+          <div class="actor-name">LNbits</div>
+          <div class="actor-label" data-i18n="s0_actor_lnbits_label">Your wallet node</div>
+        </div>
+        <div class="actor">
+          <div class="actor-avatar">🌐</div>
+          <div class="actor-name" data-i18n="s0_actor_app">QR Drop App</div>
+          <div class="actor-label" data-i18n="s0_actor_app_label">This browser</div>
+        </div>
+        <div class="actor">
+          <div class="actor-avatar">📱</div>
+          <div class="actor-name" data-i18n="s0_actor_recipient">Recipient</div>
+          <div class="actor-label" data-i18n="s0_actor_recipient_label">Unknown scanner</div>
+        </div>
+      </div>
+      <div class="flow-messages">
+        <div class="msg info">
+          <span class="msg-icon">⚙️</span>
+          <div class="msg-body">
+            <strong data-i18n="s0_msg1_title">Configure the Drop</strong>
+            <span data-i18n-html="s0_msg1_body">You set: <code>amount = 1000 sats</code>, <code>recipients = 5</code>, <code>expiry = 10 min</code>. Your LNbits Admin key is entered — it stays in your browser and is only sent directly to your LNbits instance.</span>
+          </div>
+        </div>
+        <div class="msg info delay-1">
+          <span class="msg-icon">🔑</span>
+          <div class="msg-body">
+            <strong data-i18n="s0_msg2_title">API Key Never Leaves Your Control</strong>
+            <span data-i18n-html="s0_msg2_body">The key is stored in <code>localStorage</code> and used only for direct API calls to your LNbits URL. It is never proxied through any third-party server.</span>
+          </div>
+        </div>
+      </div>
+      <div class="step-caption">
+        <h3 data-i18n="s0_caption_title">Step 1 — Configure &amp; Connect</h3>
+        <p data-i18n="s0_caption_body">You set the drop parameters. The app validates your LNbits connection and checks your wallet balance to ensure you have enough sats to fund all rounds.</p>
+      </div>
+    </div>
+
+    <!-- Scene 1: Create LNURL -->
+    <div class="flow-scene" data-scene="1">
+      <div class="actors-row">
+        <div class="actor">
+          <div class="actor-avatar highlight">🌐</div>
+          <div class="actor-name" data-i18n="s0_actor_app">QR Drop App</div>
+          <div class="actor-label" data-i18n="s1_actor_app_label">API caller</div>
+        </div>
+        <div class="actor" style="flex:0.3;align-self:center;">
+          <div class="arrow-line"></div>
+          <div style="font-size:0.7rem;color:var(--text3);margin-top:4px;">POST →</div>
+        </div>
+        <div class="actor">
+          <div class="actor-avatar highlight-blue">⚡</div>
+          <div class="actor-name" data-i18n="s1_actor_lnbits">LNbits API</div>
+          <div class="actor-label">/withdraw/api/v1/links</div>
+        </div>
+        <div class="actor" style="flex:0.3;align-self:center;">
+          <div class="arrow-line" style="background:linear-gradient(90deg, var(--green), transparent)"></div>
+          <div style="font-size:0.7rem;color:var(--text3);margin-top:4px;">← 200 OK</div>
+        </div>
+        <div class="actor">
+          <div class="actor-avatar highlight">🌐</div>
+          <div class="actor-name" data-i18n="s0_actor_app">QR Drop App</div>
+          <div class="actor-label" data-i18n="s1_actor_receives">Receives LNURL</div>
+        </div>
+      </div>
+      <div class="flow-messages">
+        <div class="msg api">
+          <span class="msg-icon">📤</span>
+          <div class="msg-body">
+            <strong data-i18n="s1_msg1_title">POST /withdraw/api/v1/links</strong>
+            <span data-i18n="s1_msg1_body">The app calls LNbits to create a new LNURL-withdraw link with the critical parameters that enforce one-time use.</span>
+          </div>
+        </div>
+        <div class="msg api delay-1">
+          <span class="msg-icon">📋</span>
+          <div class="msg-body">
+            <strong data-i18n="s1_msg2_title">Request Payload</strong>
+            <span data-i18n-html="s1_msg2_body"><code>min_withdrawable: 1000000</code> (msats) · <code>max_withdrawable: 1000000</code> · <code>uses: 1</code> ← one-time only · <code>is_unique: true</code></span>
+          </div>
+        </div>
+        <div class="msg ok delay-2">
+          <span class="msg-icon">✅</span>
+          <div class="msg-body">
+            <strong data-i18n="s1_msg3_title">LNbits Returns LNURL String</strong>
+            <span data-i18n-html="s1_msg3_body">A bech32-encoded LNURL is returned: <code>lnurl1dp68gup69uhkcmmrv9kxsmmnwsarxvpsxqcz...</code> — this encodes the callback URL for your LNbits instance.</span>
+          </div>
+        </div>
+      </div>
+      <div class="step-caption">
+        <h3 data-i18n="s1_caption_title">Step 2 — Create One-Time Withdraw Link</h3>
+        <p data-i18n-html="s1_caption_body">The app sends a single API call to your LNbits instance to create a <strong>LNURL-withdraw link with <code>uses=1</code></strong>. This is the core of the one-time-use guarantee — LNbits enforces this at the protocol level.</p>
+      </div>
+    </div>
+
+    <!-- Scene 2: Display QR -->
+    <div class="flow-scene" data-scene="2">
+      <div class="actors-row">
+        <div class="actor">
+          <div class="actor-avatar highlight">🌐</div>
+          <div class="actor-name" data-i18n="s0_actor_app">QR Drop App</div>
+          <div class="actor-label" data-i18n="s2_actor_app_label">Renders QR</div>
+        </div>
+        <div class="actor">
+          <div class="actor-avatar highlight-blue">🖥️</div>
+          <div class="actor-name" data-i18n="s2_actor_screen">Your Screen</div>
+          <div class="actor-label" data-i18n="s2_actor_screen_label">QR displayed</div>
+        </div>
+        <div class="actor">
+          <div class="actor-avatar">📱</div>
+          <div class="actor-name" data-i18n="s0_actor_recipient">Recipient</div>
+          <div class="actor-label" data-i18n="s2_actor_recipient_label">Waiting to scan</div>
+        </div>
+      </div>
+      <div class="flow-messages">
+        <div class="msg qr">
+          <span class="msg-icon">📲</span>
+          <div class="msg-body">
+            <strong data-i18n="s2_msg1_title">QR Code Rendered On-Screen</strong>
+            <span data-i18n-html="s2_msg1_body">The LNURL string is encoded into a QR code using QRCode.js (client-side, no server needed). A <strong>countdown timer</strong> starts (e.g. 10 minutes).</span>
+          </div>
+        </div>
+        <div class="msg qr delay-1">
+          <span class="msg-icon">⏱️</span>
+          <div class="msg-body">
+            <strong data-i18n="s2_msg2_title">Polling Begins (every 3 seconds)</strong>
+            <span data-i18n-html="s2_msg2_body">The app silently polls <code>GET /withdraw/api/v1/links/{id}</code> every 3 seconds, watching for <code>used = true</code> to confirm a claim.</span>
+          </div>
+        </div>
+        <div class="msg info delay-2">
+          <span class="msg-icon">🔄</span>
+          <div class="msg-body">
+            <strong data-i18n="s2_msg3_title">Expiry Guard is Active</strong>
+            <span data-i18n="s2_msg3_body">If no one claims the QR before the countdown reaches 0, the app deletes the unused link and auto-generates a fresh one — no sats are lost.</span>
+          </div>
+        </div>
+      </div>
+      <div class="step-caption">
+        <h3 data-i18n="s2_caption_title">Step 3 — Display &amp; Monitor QR</h3>
+        <p data-i18n="s2_caption_body">The QR is shown on screen with a live countdown. Background polling watches for the first claim. The expiry timer ensures the session never stalls — expired QRs auto-regenerate.</p>
+      </div>
+    </div>
+
+    <!-- Scene 3: Recipient scans -->
+    <div class="flow-scene" data-scene="3">
+      <div class="actors-row">
+        <div class="actor">
+          <div class="actor-avatar">🖥️</div>
+          <div class="actor-name" data-i18n="s2_actor_screen">Your Screen</div>
+          <div class="actor-label" data-i18n="s3_actor_screen_label">QR displayed</div>
+        </div>
+        <div class="actor">
+          <div class="actor-avatar highlight">📱</div>
+          <div class="actor-name" data-i18n="s0_actor_recipient">Recipient</div>
+          <div class="actor-label" data-i18n="s3_actor_recipient_label">Scans QR</div>
+        </div>
+        <div class="actor">
+          <div class="actor-avatar highlight-blue">⚡</div>
+          <div class="actor-name">LNbits</div>
+          <div class="actor-label" data-i18n="s3_actor_lnbits_label">Callback handler</div>
+        </div>
+      </div>
+      <div class="flow-messages">
+        <div class="msg wallet">
+          <span class="msg-icon">📷</span>
+          <div class="msg-body">
+            <strong data-i18n="s3_msg1_title">Recipient Scans QR with LN Wallet</strong>
+            <span data-i18n-html="s3_msg1_body">Their wallet decodes the LNURL, fetches the callback URL from LNbits: <code>GET lnbits.com/withdraw/api/v1/lnurl/{hash}</code> — LNbits returns the withdraw params.</span>
+          </div>
+        </div>
+        <div class="msg wallet delay-1">
+          <span class="msg-icon">⚡</span>
+          <div class="msg-body">
+            <strong data-i18n="s3_msg2_title">Wallet Constructs Invoice &amp; Submits</strong>
+            <span data-i18n="s3_msg2_body">The recipient's wallet generates a Lightning invoice for exactly 1000 sats and calls the LNbits callback URL with it. LNbits verifies and pays it immediately.</span>
+          </div>
+        </div>
+        <div class="msg ok delay-2">
+          <span class="msg-icon">💸</span>
+          <div class="msg-body">
+            <strong data-i18n="s3_msg3_title">Sats Arrive in Recipient's Wallet</strong>
+            <span data-i18n-html="s3_msg3_body">The Lightning payment settles on the network. LNbits marks the link as <code>used = true</code> and decrements remaining uses to <code>0</code>. The link is now permanently exhausted.</span>
+          </div>
+        </div>
+      </div>
+      <div class="step-caption">
+        <h3 data-i18n="s3_caption_title">Step 4 — Recipient Claims Sats</h3>
+        <p data-i18n="s3_caption_body">The recipient's wallet handles the entire claim flow automatically. They just scan and receive — no sign-up, no account, no friction. The sats are pushed to their wallet over the Lightning Network.</p>
+      </div>
+    </div>
+
+    <!-- Scene 4: Detect & log -->
+    <div class="flow-scene" data-scene="4">
+      <div class="actors-row">
+        <div class="actor">
+          <div class="actor-avatar highlight-blue">🌐</div>
+          <div class="actor-name" data-i18n="s0_actor_app">QR Drop App</div>
+          <div class="actor-label" data-i18n="s4_actor_app_label">Polling detects claim</div>
+        </div>
+        <div class="actor">
+          <div class="actor-avatar highlight-green">📋</div>
+          <div class="actor-name" data-i18n="s4_actor_log">Recipient Log</div>
+          <div class="actor-label" data-i18n="s4_actor_log_label">Session DB</div>
+        </div>
+        <div class="actor">
+          <div class="actor-avatar highlight">🚫</div>
+          <div class="actor-name" data-i18n="s4_actor_block">Block List</div>
+          <div class="actor-label" data-i18n="s4_actor_block_label">Fingerprint store</div>
+        </div>
+      </div>
+      <div class="flow-messages">
+        <div class="msg check">
+          <span class="msg-icon">🔍</span>
+          <div class="msg-body">
+            <strong data-i18n="s4_msg1_title">Poll Returns used = true</strong>
+            <span data-i18n-html="s4_msg1_body">The 3-second poll detects <code>used = true</code> on the link. The app immediately stops polling and records the claim with a pseudonymous recipient ID.</span>
+          </div>
+        </div>
+        <div class="msg check delay-1">
+          <span class="msg-icon">🏷️</span>
+          <div class="msg-body">
+            <strong data-i18n="s4_msg2_title">Recipient ID Generated &amp; Logged</strong>
+            <span data-i18n-html="s4_msg2_body">A fingerprint token is generated from <code>round + timestamp + entropy</code> and stored in the session log. This ID is displayed in the Recipient Log table.</span>
+          </div>
+        </div>
+        <div class="msg block delay-2">
+          <span class="msg-icon">🛑</span>
+          <div class="msg-body">
+            <strong data-i18n="s4_msg3_title">Round Marked Consumed — Link Destroyed</strong>
+            <span data-i18n-html="s4_msg3_body">The LNURL-withdraw link has <code>uses_left = 0</code> at the LNbits level. Even if someone has a copy of the QR code, any future scan returns an error from LNbits — <strong>it is cryptographically impossible to redeem again.</strong></span>
+          </div>
+        </div>
+      </div>
+      <div class="step-caption">
+        <h3 data-i18n="s4_caption_title">Step 5 — Log &amp; Block</h3>
+        <p data-i18n="s4_caption_body">The claim is detected, logged with a recipient identifier, and the consumed link is permanently unusable. The block list grows after each round to track who has claimed.</p>
+      </div>
+    </div>
+
+    <!-- Scene 5: Auto-regen -->
+    <div class="flow-scene" data-scene="5">
+      <div class="actors-row">
+        <div class="actor">
+          <div class="actor-avatar highlight">🌐</div>
+          <div class="actor-name" data-i18n="s0_actor_app">QR Drop App</div>
+          <div class="actor-label" data-i18n="s5_actor_app_label">Auto-regenerates</div>
+        </div>
+        <div class="actor">
+          <div class="actor-avatar highlight-blue">⚡</div>
+          <div class="actor-name">LNbits</div>
+          <div class="actor-label" data-i18n="s5_actor_lnbits_label">New link created</div>
+        </div>
+        <div class="actor">
+          <div class="actor-avatar highlight-green">📱</div>
+          <div class="actor-name" data-i18n="s5_actor_next">Next Recipient</div>
+          <div class="actor-label" data-i18n="s5_actor_next_label">Fresh QR waiting</div>
+        </div>
+      </div>
+      <div class="flow-messages">
+        <div class="msg regen">
+          <span class="msg-icon">♻️</span>
+          <div class="msg-body">
+            <strong data-i18n="s5_msg1_title">2.5 Second Delay → New Round Starts</strong>
+            <span data-i18n="s5_msg1_body">After confirming the claim, the app waits briefly (to show the ✅ confirmed screen), then calls LNbits again to create a brand-new LNURL-withdraw link for the next recipient.</span>
+          </div>
+        </div>
+        <div class="msg regen delay-1">
+          <span class="msg-icon">🆕</span>
+          <div class="msg-body">
+            <strong data-i18n="s5_msg2_title">Completely New Link &amp; New QR</strong>
+            <span data-i18n="s5_msg2_body">The new link has a completely different ID, hash, and LNURL string. The old QR is worthless. A new QR is rendered and displayed — ready for the next scanner.</span>
+          </div>
+        </div>
+        <div class="msg ok delay-2">
+          <span class="msg-icon">🔢</span>
+          <div class="msg-body">
+            <strong data-i18n="s5_msg3_title">Round Counter Advances</strong>
+            <span data-i18n-html="s5_msg3_body">The progress bar updates. If <code>currentRound &lt; totalRounds</code>, the cycle repeats. When all rounds are exhausted, the session ends and the summary screen is shown.</span>
+          </div>
+        </div>
+      </div>
+      <div class="step-caption">
+        <h3 data-i18n="s5_caption_title">Step 6 — Auto-Regenerate for Next Recipient</h3>
+        <p data-i18n="s5_caption_body">The cycle repeats automatically — no manual intervention needed. Each new QR is completely independent. You just leave the screen displayed and let recipients scan one by one.</p>
+      </div>
+    </div>
+
+  </div><!-- end flow-diagram -->
+
+  <hr class="section-divider" />
+
+  <!-- ══ SECTION 3 — Anti Double Dip ══ -->
+  <div class="section-title">
+    <div class="icon-badge" style="background:rgba(239,68,68,0.12);">🛡️</div>
+    <div>
+      <h2 data-i18n="anti_section_title">How Double-Dipping is Prevented</h2>
+      <p data-i18n="anti_section_sub">Three independent layers working together — protocol, link, and session</p>
+    </div>
+  </div>
+
+  <div class="anti-fraud-grid">
+    <div class="fraud-card">
+      <div class="card-head" style="color:var(--accent)">
+        <span style="font-size:1.3rem">🔐</span> <span data-i18n="layer1_title">Layer 1 — Protocol Level</span>
+      </div>
+      <p data-i18n-html="layer1_body">The strongest protection. The LNURL-withdraw link is created with <strong>uses=1</strong> and <strong>is_unique=true</strong>. This is enforced by LNbits at the server level.</p>
+      <ul class="detail-list">
+        <li data-i18n="layer1_li1">When a wallet calls the callback URL, LNbits checks remaining uses atomically</li>
+        <li data-i18n-html="layer1_li2">If <code>uses_left = 0</code>, LNbits returns an error and refuses to pay</li>
+        <li data-i18n="layer1_li3">No amount of retrying can bypass this — the link is exhausted at the database level</li>
+        <li data-i18n="layer1_li4">Even if a second person scans the same QR photo, LNbits rejects it</li>
+      </ul>
+      <div style="margin-top:auto"><span class="tag orange">LNURL spec</span> <span class="tag green">Server-enforced</span></div>
+    </div>
+    <div class="fraud-card">
+      <div class="card-head" style="color:var(--lightning)">
+        <span style="font-size:1.3rem">🔄</span> <span data-i18n="layer2_title">Layer 2 — One QR Per Round</span>
+      </div>
+      <p data-i18n-html="layer2_body">Each round generates a completely <strong>new, unique LNURL link</strong>. The previous QR code stops working the moment it's been claimed.</p>
+      <ul class="detail-list">
+        <li data-i18n="layer2_li1">The app immediately rotates to a new link after each claim</li>
+        <li data-i18n="layer2_li2">Old QR photos shared via messaging apps become invalid</li>
+        <li data-i18n="layer2_li3">Each new link has a unique cryptographic identifier from LNbits</li>
+        <li data-i18n="layer2_li4">Expired links are explicitly deleted via the API to prevent late claims</li>
+      </ul>
+      <div style="margin-top:auto"><span class="tag yellow">Per-round rotation</span> <span class="tag teal">Deletion on expiry</span></div>
+    </div>
+    <div class="fraud-card">
+      <div class="card-head" style="color:var(--purple)">
+        <span style="font-size:1.3rem">🏷️</span> <span data-i18n="layer3_title">Layer 3 — Recipient Fingerprinting</span>
+      </div>
+      <p data-i18n-html="layer3_body">Each successful claim is logged with a <strong>pseudonymous recipient ID</strong> tied to the round and timestamp. The blocked list provides an audit trail.</p>
+      <ul class="detail-list">
+        <li data-i18n-html="layer3_li1">A unique token is generated per claim: <code>round + timestamp + entropy</code></li>
+        <li data-i18n="layer3_li2">All claimed IDs are shown in the Recipient Log table in real time</li>
+        <li data-i18n="layer3_li3">The blocked fingerprints panel gives you visibility into who claimed each round</li>
+        <li data-i18n="layer3_li4">Session data is persisted to the database for post-session review</li>
+      </ul>
+      <div style="margin-top:auto"><span class="tag purple">Audit trail</span> <span class="tag blue">DB persistence</span></div>
+    </div>
+    <div class="fraud-card">
+      <div class="card-head" style="color:var(--teal)">
+        <span style="font-size:1.3rem">⏱️</span> <span data-i18n="layer4_title">Layer 4 — Expiry &amp; Cleanup</span>
+      </div>
+      <p data-i18n-html="layer4_body">QR codes expire after a configurable time window. Expired links are <strong>deleted via the API</strong>, not just ignored — preventing late redemptions.</p>
+      <ul class="detail-list">
+        <li data-i18n="layer4_li1">Countdown timer is displayed publicly — recipients know time is limited</li>
+        <li data-i18n-html="layer4_li2">On expiry: <code>DELETE /withdraw/api/v1/links/{id}</code> is called immediately</li>
+        <li data-i18n="layer4_li3">A fresh link is created for the next attempt — the round count continues</li>
+        <li data-i18n="layer4_li4">Expiry events are logged separately from claims in the session log</li>
+      </ul>
+      <div style="margin-top:auto"><span class="tag teal">Time-bound</span> <span class="tag red">API deletion</span></div>
+    </div>
+  </div>
+
+  <!-- Scenario comparison -->
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;">
+    <h3 style="font-size:1rem;font-weight:700;margin-bottom:1rem;" data-i18n="scenario_box_title">Scenario Comparison: Legitimate Claim vs. Attempted Double-Dip</h3>
+    <div class="scenario-tabs">
+      <button class="scenario-tab green-tab active" onclick="switchScenario('good', this)" data-i18n="scenario_tab_good">✅ Legitimate Claim</button>
+      <button class="scenario-tab red-tab" onclick="switchScenario('double', this)" data-i18n="scenario_tab_double">❌ Attempted Double-Dip</button>
+      <button class="scenario-tab red-tab" onclick="switchScenario('share', this)" data-i18n="scenario_tab_share">❌ Shared QR Attack</button>
+    </div>
+
+    <div class="scenario-panel active" id="scenario-good">
+      <div class="scenario-flow">
+        <div class="flow-step">
+          <div class="flow-step-num" style="background:rgba(34,197,94,0.15);color:var(--green)">1</div>
+          <div class="flow-step-body">
+            <strong data-i18n="good_s1_title">QR Generated (Round 3, uses=1)</strong>
+            <span data-i18n-html="good_s1_body">New LNURL-withdraw link created. Link ID: <code>abc123</code>, uses_left: 1</span>
+          </div>
+        </div>
+        <div class="flow-step-arrow"></div>
+        <div class="flow-step">
+          <div class="flow-step-num" style="background:rgba(34,197,94,0.15);color:var(--green)">2</div>
+          <div class="flow-step-body">
+            <strong data-i18n="good_s2_title">Alice scans with Phoenix Wallet</strong>
+            <span data-i18n-html="good_s2_body">Wallet calls <code>GET lnbits/lnurl/abc123</code> → LNbits checks: uses_left = 1 ✅</span>
+          </div>
+        </div>
+        <div class="flow-step-arrow"></div>
+        <div class="flow-step">
+          <div class="flow-step-num" style="background:rgba(34,197,94,0.15);color:var(--green)">3</div>
+          <div class="flow-step-body">
+            <strong data-i18n="good_s3_title">Invoice submitted → 1000 sats paid to Alice</strong>
+            <span data-i18n="good_s3_body">LNbits sets uses_left = 0. Link permanently exhausted. Alice receives sats. ✅</span>
+          </div>
+        </div>
+        <div class="flow-step-arrow"></div>
+        <div class="flow-step">
+          <div class="flow-step-num" style="background:rgba(34,197,94,0.15);color:var(--green)">4</div>
+          <div class="flow-step-body">
+            <strong data-i18n="good_s4_title">App detects claim → logs Alice → generates Round 4 QR</strong>
+            <span data-i18n-html="good_s4_body">New link ID: <code>def456</code>. Fresh QR displayed. Alice's ID added to log.</span>
+          </div>
+        </div>
+      </div>
+      <div class="outcome-banner ok" data-i18n="good_outcome">✅ Alice receives 1000 sats. One clean transaction. Link abc123 is gone forever.</div>
+    </div>
+
+    <div class="scenario-panel" id="scenario-double">
+      <div class="scenario-flow">
+        <div class="flow-step">
+          <div class="flow-step-num" style="background:rgba(239,68,68,0.12);color:var(--red)">1</div>
+          <div class="flow-step-body">
+            <strong data-i18n="double_s1_title">Bob scans the QR first — 1000 sats claimed</strong>
+            <span data-i18n-html="double_s1_body">Link <code>abc123</code> → uses_left goes from 1 → 0. Bob receives sats. ✅ for Bob.</span>
+          </div>
+        </div>
+        <div class="flow-step-arrow"></div>
+        <div class="flow-step">
+          <div class="flow-step-num" style="background:rgba(239,68,68,0.12);color:var(--red)">2</div>
+          <div class="flow-step-body">
+            <strong data-i18n="double_s2_title">Bob immediately tries to scan the same QR again</strong>
+            <span data-i18n-html="double_s2_body">Wallet calls <code>GET lnbits/lnurl/abc123</code> again → LNbits checks: uses_left = 0 ❌</span>
+          </div>
+        </div>
+        <div class="flow-step-arrow"></div>
+        <div class="flow-step">
+          <div class="flow-step-num" style="background:rgba(239,68,68,0.12);color:var(--red)">3</div>
+          <div class="flow-step-body">
+            <strong data-i18n="double_s3_title">LNbits returns error: "LNURL link already used"</strong>
+            <span data-i18n="double_s3_body">Bob's wallet shows an error. No payment is made. The callback refuses to issue a second payment for the exhausted link.</span>
+          </div>
+        </div>
+        <div class="flow-step-arrow"></div>
+        <div class="flow-step">
+          <div class="flow-step-num" style="background:rgba(239,68,68,0.12);color:var(--red)">4</div>
+          <div class="flow-step-body">
+            <strong data-i18n="double_s4_title">App has already rotated to a new QR for Round 4</strong>
+            <span data-i18n-html="double_s4_body">The app detected the claim and generated link <code>def456</code>. Bob cannot access that either.</span>
+          </div>
+        </div>
+      </div>
+      <div class="outcome-banner bad" data-i18n="double_outcome">❌ Bob's double-dip attempt fails. LNbits enforces uses=1 at the server level. No sats lost.</div>
+    </div>
+
+    <div class="scenario-panel" id="scenario-share">
+      <div class="scenario-flow">
+        <div class="flow-step">
+          <div class="flow-step-num" style="background:rgba(239,68,68,0.12);color:var(--red)">1</div>
+          <div class="flow-step-body">
+            <strong data-i18n="share_s1_title">Carol takes a screenshot of the QR and shares it in a group chat</strong>
+            <span data-i18n-html="share_s1_body">10 people in the group now have the QR image for link <code>abc123</code>. Everyone tries to scan simultaneously.</span>
+          </div>
+        </div>
+        <div class="flow-step-arrow"></div>
+        <div class="flow-step">
+          <div class="flow-step-num" style="background:rgba(239,68,68,0.12);color:var(--red)">2</div>
+          <div class="flow-step-body">
+            <strong data-i18n="share_s2_title">The first person to complete the callback wins</strong>
+            <span data-i18n="share_s2_body">LNbits processes the first valid invoice submission atomically — uses_left: 1 → 0. Only one payment is made regardless of how many people try at the same time.</span>
+          </div>
+        </div>
+        <div class="flow-step-arrow"></div>
+        <div class="flow-step">
+          <div class="flow-step-num" style="background:rgba(239,68,68,0.12);color:var(--red)">3</div>
+          <div class="flow-step-body">
+            <strong data-i18n="share_s3_title">All other 9 people get "already used" errors from LNbits</strong>
+            <span data-i18n="share_s3_body">No matter how fast they are, the link is exhausted after the first claim. Race conditions cannot result in double payments.</span>
+          </div>
+        </div>
+        <div class="flow-step-arrow"></div>
+        <div class="flow-step">
+          <div class="flow-step-num" style="background:rgba(239,68,68,0.12);color:var(--red)">4</div>
+          <div class="flow-step-body">
+            <strong data-i18n="share_s4_title">Old QR is also expired/rotated by the time others try</strong>
+            <span data-i18n="share_s4_body">The app detects the claim and rotates to a new QR. The old screenshot is obsolete and cannot be used against future rounds either.</span>
+          </div>
+        </div>
+      </div>
+      <div class="outcome-banner bad" data-i18n="share_outcome">❌ Shared QR attack fails. Only 1-of-10 receives sats (the first to claim). Exactly as intended — first come, first served.</div>
+    </div>
+  </div>
+
+  <hr class="section-divider" />
+
+  <!-- ══ SECTION 4 — LNURL Anatomy ══ -->
+  <div class="section-title">
+    <div class="icon-badge" style="background:rgba(168,85,247,0.12);">🧬</div>
+    <div>
+      <h2 data-i18n="lnurl_section_title">LNURL-Withdraw Anatomy</h2>
+      <p data-i18n="lnurl_section_sub">What's inside the QR code and how the protocol enforces one-time use</p>
+    </div>
+  </div>
+
+  <div class="lnurl-anatomy">
+    <p style="font-size:0.85rem;color:var(--text2);margin-bottom:1.25rem;line-height:1.6" data-i18n-html="lnurl_intro">
+      The QR code encodes a <strong>bech32-encoded LNURL</strong> string. When scanned, the recipient's wallet decodes it to a URL and makes an HTTP request to your LNbits instance. The response is a JSON object specifying the withdraw parameters:
+    </p>
+    <div class="code-block">
+<span class="cm">// Step 1: Wallet fetches the LNURL callback URL</span>
+<span class="cm">// GET https://legend.lnbits.com/withdraw/api/v1/lnurl/{unique_hash}</span>
+
+<span class="cm">// Step 2: LNbits responds with withdraw parameters</span>
+{
+  <span class="k">"tag"</span>: <span class="s">"withdrawRequest"</span>,
+  <span class="k">"callback"</span>: <span class="s">"https://legend.lnbits.com/withdraw/api/v1/lnurl/cb/{hash}"</span>,
+  <span class="k">"k1"</span>: <span class="s">"a3f9b2c1..."</span>,                  <span class="cm">// Random challenge token</span>
+  <span class="k">"minWithdrawable"</span>: <span class="n">1000000</span>,        <span class="cm">// msats (= 1000 sats)</span>
+  <span class="k">"maxWithdrawable"</span>: <span class="n">1000000</span>,        <span class="cm">// msats (fixed amount)</span>
+  <span class="k">"defaultDescription"</span>: <span class="s">"QR Drop Round 3"</span>,
+  <span class="k">"balanceCheck"</span>: <span class="s">"..."</span>                <span class="cm">// Optional balance check URL</span>
+}
+
+<span class="cm">// Step 3: Wallet generates an invoice and submits it</span>
+<span class="cm">// GET callback?k1={k1}&pr={bolt11_invoice}</span>
+
+<span class="cm">// Step 4: LNbits validates k1, checks uses_left > 0, pays invoice</span>
+<span class="cm">// → sets uses_left = 0 atomically</span>
+{ <span class="k">"status"</span>: <span class="s">"OK"</span> }                     <span class="cm">// ← success</span>
+{ <span class="k">"status"</span>: <span class="s">"ERROR"</span>, <span class="k">"reason"</span>: <span class="s">"Link already used"</span> }  <span class="cm">// ← on retry</span>
+    </div>
+    <div class="field-annotations">
+      <div class="annotation">
+        <span class="ann-key">tag</span>
+        <div class="ann-desc" data-i18n-html="ann_tag_desc"><strong>Identifies the type</strong> as a "withdrawRequest" — tells the wallet to present a receive UI, not a payment UI.</div>
+      </div>
+      <div class="annotation">
+        <span class="ann-key">k1</span>
+        <div class="ann-desc" data-i18n-html="ann_k1_desc"><strong>Challenge token</strong> — a random value LNbits generates. Must be echoed back in the callback to prove the wallet fetched the correct link.</div>
+      </div>
+      <div class="annotation">
+        <span class="ann-key">min/maxWithdrawable</span>
+        <div class="ann-desc" data-i18n-html="ann_minmax_desc"><strong>Both set to the same value</strong> (e.g. 1,000,000 msats = 1000 sats) — forces the exact amount. The wallet cannot request more or less.</div>
+      </div>
+      <div class="annotation">
+        <span class="ann-key">callback</span>
+        <div class="ann-desc" data-i18n-html="ann_callback_desc"><strong>The endpoint to POST the invoice to.</strong> This is your LNbits server — it validates the invoice and executes the Lightning payment.</div>
+      </div>
+      <div class="annotation">
+        <span class="ann-key">uses=1</span>
+        <div class="ann-desc" data-i18n-html="ann_uses_desc"><strong>Stored in LNbits DB</strong> — not in the LNURL itself. LNbits checks this atomically before processing any callback, preventing race-condition exploits.</div>
+      </div>
+      <div class="annotation">
+        <span class="ann-key">is_unique</span>
+        <div class="ann-desc" data-i18n-html="ann_unique_desc"><strong>Forces a unique hash</strong> per link so that even if two links have the same parameters, their LNURL strings are different and cannot be confused.</div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="section-divider" />
+
+  <!-- ══ SECTION 5 — Sequence Diagram ══ -->
+  <div class="section-title">
+    <div class="icon-badge" style="background:rgba(20,184,166,0.12);">📊</div>
+    <div>
+      <h2 data-i18n="seq_section_title">Full Sequence Diagram</h2>
+      <p data-i18n="seq_section_sub">Message flow between all actors for one complete round</p>
+    </div>
+  </div>
+
+  <div class="seq-wrap">
+    <svg class="seq-diagram" viewBox="0 0 820 560" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:auto;">
+      <defs>
+        <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#f7931a"/></marker>
+        <marker id="arrow-green" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#22c55e"/></marker>
+        <marker id="arrow-blue" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#3b82f6"/></marker>
+        <marker id="arrow-purple" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#a855f7"/></marker>
+        <style>
+          .seq-text  { font-family: Inter, sans-serif; font-size: 11px; fill: #9898b8; }
+          .seq-label { font-family: Inter, sans-serif; font-size: 10px; fill: #9898b8; }
+          .seq-actor { font-family: Inter, sans-serif; font-size: 12px; font-weight: 700; fill: #e8e8f0; }
+          .seq-note  { font-family: Inter, sans-serif; font-size: 10px; fill: #5a5a7a; font-style: italic; }
+          .seq-msg   { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; fill: #ffb347; }
+          .seq-sec   { font-family: Inter, sans-serif; font-size: 10px; font-weight: 600; fill: #5a5a7a; letter-spacing: 0.5px; text-transform: uppercase; }
+        </style>
+      </defs>
+      <rect width="820" height="560" fill="#13131f" rx="8"/>
+      <line x1="90"  y1="70" x2="90"  y2="540" stroke="#2e2e4e" stroke-width="1.5" stroke-dasharray="4,4"/>
+      <line x1="230" y1="70" x2="230" y2="540" stroke="#2e2e4e" stroke-width="1.5" stroke-dasharray="4,4"/>
+      <line x1="410" y1="70" x2="410" y2="540" stroke="#2e2e4e" stroke-width="1.5" stroke-dasharray="4,4"/>
+      <line x1="590" y1="70" x2="590" y2="540" stroke="#2e2e4e" stroke-width="1.5" stroke-dasharray="4,4"/>
+      <line x1="730" y1="70" x2="730" y2="540" stroke="#2e2e4e" stroke-width="1.5" stroke-dasharray="4,4"/>
+      <rect x="46"  y="14" width="88" height="42" rx="8" fill="#1e1e32" stroke="#3d3d60" stroke-width="1.2"/>
+      <rect x="186" y="14" width="88" height="42" rx="8" fill="#1e1e32" stroke="#3d3d60" stroke-width="1.2"/>
+      <rect x="366" y="14" width="88" height="42" rx="8" fill="#1e1e32" stroke="#f7931a" stroke-width="1.2"/>
+      <rect x="546" y="14" width="88" height="42" rx="8" fill="#1e1e32" stroke="#3d3d60" stroke-width="1.2"/>
+      <rect x="686" y="14" width="88" height="42" rx="8" fill="#1e1e32" stroke="#22c55e" stroke-width="1.2"/>
+      <text x="90"  y="31" text-anchor="middle" class="seq-actor">🧑‍💻 You</text>
+      <text x="90"  y="47" text-anchor="middle" class="seq-label">Sender</text>
+      <text x="230" y="31" text-anchor="middle" class="seq-actor">🌐 App</text>
+      <text x="230" y="47" text-anchor="middle" class="seq-label">Browser</text>
+      <text x="410" y="31" text-anchor="middle" class="seq-actor">⚡ LNbits</text>
+      <text x="410" y="47" text-anchor="middle" class="seq-label">Your Node</text>
+      <text x="590" y="31" text-anchor="middle" class="seq-actor">📱 Recipient</text>
+      <text x="590" y="47" text-anchor="middle" class="seq-label">Scanner</text>
+      <text x="730" y="31" text-anchor="middle" class="seq-actor">⚡ Recip LN</text>
+      <text x="730" y="47" text-anchor="middle" class="seq-label">Their wallet</text>
+      <rect x="14" y="78" width="792" height="18" rx="3" fill="rgba(247,147,26,0.06)"/>
+      <text x="20" y="91" class="seq-sec">Phase 1 — Setup</text>
+      <line x1="90" y1="110" x2="222" y2="110" stroke="#f7931a" stroke-width="1.5" marker-end="url(#arrow)"/>
+      <text x="155" y="107" text-anchor="middle" class="seq-msg">Launch session</text>
+      <text x="155" y="121" text-anchor="middle" class="seq-note">amount=1000 sats, rounds=5</text>
+      <line x1="230" y1="143" x2="402" y2="143" stroke="#f7931a" stroke-width="1.5" marker-end="url(#arrow)"/>
+      <text x="315" y="140" text-anchor="middle" class="seq-msg">POST /withdraw/api/v1/links</text>
+      <text x="315" y="153" text-anchor="middle" class="seq-note">uses=1, min/max=1000000msats</text>
+      <line x1="410" y1="173" x2="238" y2="173" stroke="#22c55e" stroke-width="1.5" marker-end="url(#arrow-green)"/>
+      <text x="325" y="170" text-anchor="middle" class="seq-msg">200 OK → {id, lnurl}</text>
+      <text x="325" y="183" text-anchor="middle" class="seq-note">uses_left=1 stored in DB</text>
+      <rect x="14" y="196" width="792" height="18" rx="3" fill="rgba(59,130,246,0.06)"/>
+      <text x="20" y="209" class="seq-sec">Phase 2 — Display &amp; Monitor</text>
+      <rect x="196" y="218" width="68" height="22" rx="4" fill="rgba(59,130,246,0.12)" stroke="rgba(59,130,246,0.3)" stroke-width="1"/>
+      <text x="230" y="233" text-anchor="middle" class="seq-label" style="fill:#3b82f6">Render QR</text>
+      <path d="M 230 252 Q 280 252 280 265 Q 280 278 230 278" stroke="#2e2e4e" stroke-width="1.2" fill="none" stroke-dasharray="3,2"/>
+      <text x="288" y="268" class="seq-note">Poll every 3s</text>
+      <line x1="280" y1="278" x2="238" y2="278" stroke="#2e2e4e" stroke-width="1" marker-end="url(#arrow)"/>
+      <text x="230" y="298" text-anchor="middle" class="seq-note" style="fill:#ffd700">⏱ Countdown active</text>
+      <rect x="14" y="310" width="792" height="18" rx="3" fill="rgba(34,197,94,0.06)"/>
+      <text x="20" y="323" class="seq-sec">Phase 3 — Claim</text>
+      <line x1="590" y1="342" x2="722" y2="342" stroke="#3b82f6" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+      <text x="655" y="339" text-anchor="middle" class="seq-msg">Scan QR (any LN wallet)</text>
+      <line x1="730" y1="362" x2="418" y2="362" stroke="#3b82f6" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+      <text x="575" y="359" text-anchor="middle" class="seq-msg">GET /lnurl/{hash}</text>
+      <line x1="410" y1="382" x2="722" y2="382" stroke="#22c55e" stroke-width="1.5" marker-end="url(#arrow-green)"/>
+      <text x="570" y="379" text-anchor="middle" class="seq-msg">withdrawRequest params</text>
+      <text x="570" y="392" text-anchor="middle" class="seq-note">checks uses_left=1 → OK</text>
+      <line x1="730" y1="412" x2="418" y2="412" stroke="#3b82f6" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+      <text x="575" y="409" text-anchor="middle" class="seq-msg">GET callback?k1=..&amp;pr={invoice}</text>
+      <rect x="366" y="422" width="88" height="22" rx="4" fill="rgba(247,147,26,0.12)" stroke="rgba(247,147,26,0.3)" stroke-width="1"/>
+      <text x="410" y="437" text-anchor="middle" class="seq-label" style="fill:#f7931a">Pay + uses_left→0</text>
+      <line x1="410" y1="455" x2="722" y2="455" stroke="#22c55e" stroke-width="1.5" marker-end="url(#arrow-green)"/>
+      <text x="565" y="452" text-anchor="middle" class="seq-msg">{status: "OK"} → 1000 sats ✅</text>
+      <rect x="14" y="468" width="792" height="18" rx="3" fill="rgba(168,85,247,0.06)"/>
+      <text x="20" y="481" class="seq-sec">Phase 4 — Detect &amp; Rotate</text>
+      <line x1="230" y1="500" x2="402" y2="500" stroke="#a855f7" stroke-width="1.5" marker-end="url(#arrow-purple)"/>
+      <text x="315" y="497" text-anchor="middle" class="seq-msg">GET links/{id} → used=true</text>
+      <rect x="196" y="510" width="68" height="22" rx="4" fill="rgba(168,85,247,0.12)" stroke="rgba(168,85,247,0.3)" stroke-width="1"/>
+      <text x="230" y="525" text-anchor="middle" class="seq-label" style="fill:#a855f7">Log + New QR</text>
+      <rect x="546" y="468" width="260" height="30" rx="4" fill="rgba(239,68,68,0.06)" stroke="rgba(239,68,68,0.2)" stroke-width="1"/>
+      <text x="675" y="480" text-anchor="middle" class="seq-note" style="fill:#ef4444">Any retry: uses_left=0</text>
+      <text x="675" y="492" text-anchor="middle" class="seq-note" style="fill:#ef4444">→ LNbits returns ERROR ❌</text>
+    </svg>
+  </div>
+
+  <hr class="section-divider" />
+
+  <!-- ══ SECTION 6 — API Reference ══ -->
+  <div class="section-title">
+    <div class="icon-badge" style="background:rgba(59,130,246,0.12);">📡</div>
+    <div>
+      <h2 data-i18n="api_section_title">API Calls Reference</h2>
+      <p data-i18n="api_section_sub">Every LNbits endpoint used by the app and when it's called</p>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table class="spec-table">
+      <thead>
+        <tr>
+          <th data-i18n="api_th_when">When</th>
+          <th data-i18n="api_th_method">Method</th>
+          <th data-i18n="api_th_endpoint">Endpoint</th>
+          <th data-i18n="api_th_purpose">Purpose</th>
+          <th data-i18n="api_th_params">Key Params</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td data-i18n="api_r1_when">Test Connection</td>
+          <td><span class="tag blue">GET</span></td>
+          <td><code>/api/v1/wallet</code></td>
+          <td data-i18n="api_r1_purpose">Verify API key, fetch balance</td>
+          <td data-i18n-html="api_r1_params">Header: <code>X-Api-Key</code></td>
+        </tr>
+        <tr>
+          <td data-i18n="api_r2_when">Each Round Start</td>
+          <td><span class="tag orange">POST</span></td>
+          <td><code>/withdraw/api/v1/links</code></td>
+          <td data-i18n="api_r2_purpose">Create one-time withdraw link</td>
+          <td data-i18n-html="api_r2_params"><code>uses=1</code>, <code>is_unique=true</code>, <code>min/max_withdrawable</code></td>
+        </tr>
+        <tr>
+          <td data-i18n="api_r3_when">Every 3 seconds</td>
+          <td><span class="tag blue">GET</span></td>
+          <td><code>/withdraw/api/v1/links/{id}</code></td>
+          <td data-i18n="api_r3_purpose">Poll for claim status</td>
+          <td data-i18n-html="api_r3_params">Checks <code>used</code> or <code>times_used ≥ 1</code></td>
+        </tr>
+        <tr>
+          <td data-i18n="api_r4_when">On QR Expiry</td>
+          <td><span class="tag red">DELETE</span></td>
+          <td><code>/withdraw/api/v1/links/{id}</code></td>
+          <td data-i18n="api_r4_purpose">Delete unused expired link</td>
+          <td data-i18n="api_r4_params">Prevents late redemptions</td>
+        </tr>
+        <tr>
+          <td data-i18n="api_r5_when">Recipient Scans</td>
+          <td><span class="tag blue">GET</span></td>
+          <td><code>/withdraw/api/v1/lnurl/{hash}</code></td>
+          <td data-i18n="api_r5_purpose">LNbits returns withdraw params</td>
+          <td data-i18n="api_r5_params">Called by recipient's wallet, not the app</td>
+        </tr>
+        <tr>
+          <td data-i18n="api_r6_when">Recipient Claims</td>
+          <td><span class="tag blue">GET</span></td>
+          <td><code>/withdraw/api/v1/lnurl/cb/{hash}</code></td>
+          <td data-i18n="api_r6_purpose">Wallet submits invoice for payment</td>
+          <td data-i18n-html="api_r6_params"><code>k1</code> challenge + <code>pr</code> bolt11 invoice</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Footer -->
+  <footer style="text-align:center;margin-top:3rem;padding-top:2rem;border-top:1px solid var(--border);">
+    <p style="font-size:0.82rem;color:var(--text3)" data-i18n-html="footer_text">
+      ⚡ Lightning QR Drop — Built on <a href="https://lnbits.com" target="_blank" style="color:var(--accent2);text-decoration:none">LNbits</a> · LNURL-withdraw RFC · Bitcoin Lightning Network
+    </p>
+    <a href="index.html" class="btn-back" style="margin-top:1rem;display:inline-flex">
+      <i class="fas fa-arrow-left"></i> <span data-i18n="nav_back_to_app">Back to App</span>
+    </a>
+  </footer>
+
+</div><!-- end page-wrap -->
+
+<script src="js/i18n.js"></script>
+<script>
+  // ── Step flow data (labels come from i18n) ────────────────────────────────
+  const stepKeys = ['step0_label','step1_label','step2_label','step3_label','step4_label','step5_label'];
+  const stepIcons = ['⚙️','🔗','📲','📷','🔍','♻️'];
+
+  let currentStep = 0;
+  let autoPlayTimer = null;
+  let autoPlaying = false;
+  let playSpeed = 1200;
+
+  function buildPills() {
+    const wrap = document.getElementById('step-progress');
+    wrap.innerHTML = '';
+    stepKeys.forEach((key, i) => {
+      if (i > 0) {
+        const conn = document.createElement('div');
+        conn.className = 'step-connector' + (i <= currentStep ? ' done' : '');
+        conn.id = `conn-${i}`;
+        wrap.appendChild(conn);
+      }
+      const pill = document.createElement('div');
+      pill.className = 'step-pill' +
+        (i === currentStep ? ' active' : '') +
+        (i < currentStep ? ' done' : '');
+      pill.onclick = () => goToStep(i);
+      pill.innerHTML = `<span class="pill-num">${i < currentStep ? '✓' : (i+1)}</span>${stepIcons[i]} ${i18n.t(key)}`;
+      pill.id = `pill-${i}`;
+      wrap.appendChild(pill);
+    });
+  }
+
+  function goToStep(n) {
+    document.querySelectorAll('.flow-scene').forEach(s => s.classList.remove('active'));
+    document.querySelector(`.flow-scene[data-scene="${n}"]`).classList.add('active');
+    currentStep = n;
+    buildPills();
+  }
+
+  function stepFlow(dir) {
+    goToStep(Math.max(0, Math.min(stepKeys.length - 1, currentStep + dir)));
+  }
+
+  function resetFlow() { stopAutoPlay(); goToStep(0); }
+
+  function toggleAutoPlay() {
+    autoPlaying ? stopAutoPlay() : startAutoPlay();
+  }
+
+  function startAutoPlay() {
+    autoPlaying = true;
+    const btn = document.getElementById('play-btn');
+    const lbl = document.getElementById('play-btn-label');
+    lbl.setAttribute('data-i18n', 'btn_pause');
+    lbl.textContent = i18n.t('btn_pause');
+    btn.querySelector('i').className = 'fas fa-pause';
+
+    function tick() {
+      if (currentStep < stepKeys.length - 1) {
+        stepFlow(1);
+        autoPlayTimer = setTimeout(tick, playSpeed);
+      } else { stopAutoPlay(); }
+    }
+    autoPlayTimer = setTimeout(tick, playSpeed);
+  }
+
+  function stopAutoPlay() {
+    autoPlaying = false;
+    clearTimeout(autoPlayTimer);
+    const btn = document.getElementById('play-btn');
+    const lbl = document.getElementById('play-btn-label');
+    lbl.setAttribute('data-i18n', 'btn_autoplay');
+    lbl.textContent = i18n.t('btn_autoplay');
+    btn.querySelector('i').className = 'fas fa-play';
+  }
+
+  function setSpeed(btn) {
+    document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    playSpeed = parseInt(btn.dataset.speed);
+    if (autoPlaying) { stopAutoPlay(); startAutoPlay(); }
+  }
+
+  function switchScenario(id, btn) {
+    document.querySelectorAll('.scenario-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.scenario-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById(`scenario-${id}`).classList.add('active');
+    btn.classList.add('active');
+  }
+
+  // ── Language toggle ───────────────────────────────────────────────────────
+  function setLang(l) {
+    document.getElementById('lang-en-btn').classList.toggle('active', l === 'en');
+    document.getElementById('lang-ja-btn').classList.toggle('active', l === 'ja');
+    i18n.setLang(l);
+    buildPills(); // rebuild pills with new language
+  }
+
+  // Re-build pills when language changes (fired by i18n.setLang)
+  document.addEventListener('langchange', () => { buildPills(); });
+
+  // ── Boot ──────────────────────────────────────────────────────────────────
+  (function initLang() {
+    const saved = localStorage.getItem('lnqr_lang') || 'en';
+    document.getElementById('lang-en-btn').classList.toggle('active', saved === 'en');
+    document.getElementById('lang-ja-btn').classList.toggle('active', saved !== 'en');
+    i18n.init();
+    buildPills();
+  })();
+</script>
+
+</body>
+</html>
