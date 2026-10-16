@@ -446,12 +446,14 @@
   </div>
 </div>
 
+<script src="js/gift-core.js"></script>
+<script src="js/issuance.js"></script>
 <script>
 /* ================================================================
    Bulk Lightning Send — full app
    Storage keys:
      lnbits_url          → string
-     lnbits_api_key      → string
+     管理キーはメモリ内のみ（保存しません）
      bulk_address_book   → JSON: { [address]: { name, lastSats, payCount, lastPaid } }
      bulk_snapshots      → JSON: [ { id, name, createdAt, rows:[{address,sats}] } ]
    ================================================================ */
@@ -467,6 +469,7 @@ let rows       = [];   // { id, address, sats, status, statusText }
 let walletSats = null;
 let sending    = false;
 let rowCounter = 0;
+const bulkLedger = new GiftCore.Ledger();
 
 // ── DOM helper ─────────────────────────────────────────────────
 function $(id) { return document.getElementById(id); }
@@ -491,12 +494,13 @@ function log(html) {
 
 // ── Persist LNbits settings ────────────────────────────────────
 function loadSettings() {
-  $('lnbits-url').value = localStorage.getItem(LS_URL) || '';
-  $('api-key').value    = localStorage.getItem(LS_KEY) || '';
+  $('api-key').value = '';
+  try {GiftCore.clearLegacyKey(localStorage);$('lnbits-url').value=localStorage.getItem(LS_URL)||'';}
+  catch {toast('ブラウザの設定保存を利用できません。接続先を入力してください。','error');}
 }
 function saveSettings() {
-  localStorage.setItem(LS_URL, $('lnbits-url').value.trim());
-  localStorage.setItem(LS_KEY, $('api-key').value.trim());
+  try{localStorage.setItem(LS_URL, $('lnbits-url').value.trim());}catch{}
+
 }
 
 // ── Address book ───────────────────────────────────────────────
@@ -634,6 +638,7 @@ function doSaveSnapshot(name, snaps, replaceId) {
 }
 
 function loadSnapshot() {
+  if(sending || rows.some(r=>r.paymentId && r.status==='pending')) {toast('未確認の送金を照合してから一覧を変更してください。','error');return;}
   const id = $('snapshot-select').value;
   if (!id) { toast('Select a snapshot first.', 'error'); return; }
   const snaps = loadSnapshots();
@@ -683,9 +688,7 @@ async function checkBalance() {
   btn.disabled = true;
   $('balance-display').textContent = '⏳ checking…';
   try {
-    const res = await fetch(`${url}/api/v1/wallet`, { headers: { 'X-Api-Key': key } });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
+    const data = await GiftCore.request(GiftCore.serverUrl(url)+'/api/v1/wallet', { headers: { 'X-Api-Key': key } });
     walletSats = Math.floor(data.balance / 1000);
     $('balance-display').textContent = `✅ ${walletSats.toLocaleString()} sats`;
     $('wallet-sats').textContent = walletSats.toLocaleString();
@@ -700,6 +703,7 @@ async function checkBalance() {
 
 // ── Row management ─────────────────────────────────────────────
 function addRow(address = '', sats = '') {
+  if(sending) return;
   const id = ++rowCounter;
   rows.push({ id, address: String(address), sats: String(sats), status: 'idle', statusText: '—' });
   renderRows();
@@ -708,6 +712,7 @@ function addRow(address = '', sats = '') {
 }
 
 function removeRow(id) {
+  if(sending || rows.some(r=>r.id===id && r.paymentId && r.status==='pending')) return;
   rows = rows.filter(r => r.id !== id);
   renderRows();
   updateTotals();
@@ -730,7 +735,7 @@ function renderRows() {
             placeholder="user@domain.com"
             value="${escHtml(row.address)}"
             autocomplete="off"
-            ${sending ? 'disabled' : ''} />
+            ${sending || row.paymentId ? 'disabled' : ''} />
         </div>
       </td>
       <td class="sats-col">
@@ -739,7 +744,7 @@ function renderRows() {
           data-id="${row.id}" data-field="sats"
           placeholder="sats" min="1"
           value="${escHtml(row.sats)}"
-          ${sending ? 'disabled' : ''} />
+          ${sending || row.paymentId ? 'disabled' : ''} />
       </td>
       <td class="status-col">
         <span class="row-status ${row.status}">
@@ -747,7 +752,7 @@ function renderRows() {
         </span>
       </td>
       <td class="remove-col">
-        <button type="button" class="btn-remove" data-id="${row.id}" title="Remove" ${sending ? 'disabled' : ''}>
+        <button type="button" class="btn-remove" data-id="${row.id}" title="Remove" ${sending || (row.paymentId && row.status==='pending') ? 'disabled' : ''}>
           <i class="fas fa-times"></i>
         </button>
       </td>
@@ -855,7 +860,9 @@ function updateTotals() {
 
 function updateSendBtn() {
   const hasRows  = rows.length > 0;
-  const allValid = rows.every(r => r.address.trim() && parseInt(r.sats) > 0);
+  const allValid = rows.every(r => {
+    try {return !!r.address.trim() && !!GiftCore.integer(r.sats,Math.floor(Number.MAX_SAFE_INTEGER/1000));} catch {return false;}
+  });
   $('send-all-btn').disabled = sending || !hasRows || !allValid;
 }
 
@@ -865,115 +872,122 @@ async function resolveLightningAddress(address) {
   if (at < 1) throw new Error('Invalid Lightning address format');
   const user   = address.slice(0, at);
   const domain = address.slice(at + 1);
-  const metaRes = await fetch(`https://${domain}/.well-known/lnurlp/${user}`);
-  if (!metaRes.ok) throw new Error(`LNURL fetch failed (${metaRes.status})`);
-  const meta = await metaRes.json();
+  if(!user || !domain || /[\s/@?#:\\]/.test(domain)) throw new Error('Invalid Lightning address format');
+  const meta = await GiftCore.request(`https://${domain}/.well-known/lnurlp/${encodeURIComponent(user)}`);
   if (meta.status === 'ERROR') throw new Error(meta.reason || 'LNURL error');
   return meta;
 }
 
 async function getInvoice(meta, sats) {
-  const msats = sats * 1000;
+  const msats = GiftCore.integer(sats,Math.floor(Number.MAX_SAFE_INTEGER/1000)) * 1000;
+  if(meta.tag!=='payRequest' || !Number.isSafeInteger(meta.minSendable) || !Number.isSafeInteger(meta.maxSendable) || meta.minSendable<1 || meta.maxSendable<meta.minSendable) throw new Error('Invalid LNURL payment limits');
   if (msats < meta.minSendable) throw new Error(`Min ${meta.minSendable / 1000} sats`);
   if (msats > meta.maxSendable) throw new Error(`Max ${meta.maxSendable / 1000} sats`);
-  const sep = meta.callback.includes('?') ? '&' : '?';
-  const res = await fetch(`${meta.callback}${sep}amount=${msats}`);
-  if (!res.ok) throw new Error(`Invoice request failed (${res.status})`);
-  const cb = await res.json();
+  const callback=new URL(GiftCore.httpUrl(meta.callback));
+  if(callback.hash) throw new Error('Invalid LNURL callback');
+  callback.searchParams.set('amount',String(msats));
+  const cb = await GiftCore.request(callback.href);
   if (cb.status === 'ERROR') throw new Error(cb.reason || 'Invoice error');
   if (!cb.pr) throw new Error('No bolt11 in response');
   return cb.pr;
 }
 
-async function payInvoice(bolt11, url, key) {
-  const res = await fetch(`${url}/api/v1/payments`, {
+async function payInvoice(bolt11, url, key, sats) {
+  GiftCore.assertInvoice(bolt11, GiftCore.integer(sats,Math.floor(Number.MAX_SAFE_INTEGER/1000))*1000);
+  return GiftCore.request(GiftCore.serverUrl(url)+'/api/v1/payments', {
     method: 'POST',
     headers: { 'X-Api-Key': key, 'Content-Type': 'application/json' },
     body: JSON.stringify({ out: true, bolt11 })
   });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.detail || data.message || `HTTP ${res.status}`);
-  return data;
+}
+
+// Pending records contain no API keys. Restore them before allowing new payments.
+async function restorePendingPayments(records) {
+  records=records||await bulkLedger.list('bulk-payment');
+  let restored=0;
+  for(const record of records.filter(r=>r.state==='payment_pending')) {
+    if(rows.some(r=>r.paymentId===record.id)) continue;
+    rows.push({id:++rowCounter,address:record.address,sats:String(record.sats),paymentId:record.id,status:'pending',statusText:'未確認 · '+record.lnbitsUrl});
+    restored++;
+  }
+  return restored;
 }
 
 // ── Send all ───────────────────────────────────────────────────
 async function sendAll() {
-  if (sending) return;
-  const { url, key } = getConn();
-  if (!url || !key) { toast('Enter LNbits URL and API key first.', 'error'); return; }
-
-  const invalids = rows.filter(r => !r.address.trim() || !(parseInt(r.sats) > 0));
-  if (invalids.length) { toast('Fill in all addresses and amounts first.', 'error'); return; }
-
-  sending = true;
-  updateSendBtn();
-  renderRows();
-  $('progress-log').innerHTML = '';
-  $('summary-chips').style.display = 'none';
-  saveSettings();
-
-  let okCount = 0, failCount = 0, satsSent = 0;
-  log(`<span class="log-info">⚡ Starting ${rows.length} payment${rows.length !== 1 ? 's' : ''}…</span>`);
-
-  for (const row of rows) {
-    row.status = 'pending'; row.statusText = 'Resolving…'; renderRows();
-    const sats = parseInt(row.sats);
-    const addr = row.address.trim();
-    try {
-      log(`<span class="log-dim">[${escHtml(addr)}]</span> Resolving…`);
-      const meta = await resolveLightningAddress(addr);
-
-      row.statusText = 'Getting invoice…'; renderRows();
-      log(`<span class="log-dim">[${escHtml(addr)}]</span> Getting invoice for ${sats} sats…`);
-      const bolt11 = await getInvoice(meta, sats);
-
-      row.statusText = 'Paying…'; renderRows();
-      log(`<span class="log-dim">[${escHtml(addr)}]</span> Paying…`);
-      await payInvoice(bolt11, url, key);
-
-      row.status = 'ok';
-      row.statusText = `✓ ${sats.toLocaleString()} sats`;
-      okCount++; satsSent += sats;
-      log(`<span class="log-ok">✅ [${escHtml(addr)}] Paid ${sats.toLocaleString()} sats</span>`);
-
-      // ← Save to address book on success
-      recordSuccessfulPayment(addr, sats);
-
-    } catch (err) {
-      row.status = 'fail';
-      row.statusText = err.message.slice(0, 40);
-      failCount++;
-      log(`<span class="log-fail">❌ [${escHtml(addr)}] ${escHtml(err.message)}</span>`);
+  if(sending) return;
+  sending=true;updateSendBtn();renderRows();
+  $('progress-log').innerHTML='';$('summary-chips').style.display='none';
+  try {await GiftCore.exclusive(async()=>{
+    const conn=getConn();conn.url=GiftCore.serverUrl(conn.url);
+    if(!conn.key) throw new Error('Enter LNbits URL and API key first.');
+    await bulkLedger.open();
+    // Include unresolved sends even if another tab created them after this page loaded.
+    const restored=await restorePendingPayments();
+    const wallet=await GiftCore.request(conn.url+'/api/v1/wallet',{headers:{'X-Api-Key':conn.key}});
+    if(!wallet.id) throw new Error('送金元ウォレットを確認できません。');
+    // When discovering another tab's payment, this click only reconciles it.
+    const batch=rows.filter(row=>!restored||row.paymentId).sort((a,b)=>Number(!!b.paymentId)-Number(!!a.paymentId));
+    for(const row of batch) {
+      if(!row.address.trim()) throw new Error('Fill in all addresses first.');
+      GiftCore.integer(row.sats,Math.floor(Number.MAX_SAFE_INTEGER/1000));
     }
-    renderRows();
-    await new Promise(r => setTimeout(r, 400));
+    saveSettings();
+    for(const row of batch) {
+      const addr=row.address.trim(),sats=GiftCore.integer(row.sats,Math.floor(Number.MAX_SAFE_INTEGER/1000));
+      try {
+        row.status='pending';row.statusText=row.paymentId?'照合中…':'Resolving…';renderRows();
+        let record;
+        if(row.paymentId) {
+          record=await bulkLedger.get(row.paymentId);
+          if(!record || record.kind!=='bulk-payment' || record.lnbitsUrl!==conn.url || record.ownerWalletId!==wallet.id || record.address!==addr || record.sats!==sats) throw new Error('保存済み送金と接続先・ウォレット・宛先・金額が一致しません。');
+        } else {
+          const meta=await resolveLightningAddress(addr),bolt11=await getInvoice(meta,sats);
+          GiftCore.assertInvoice(bolt11,sats*1000);
+          record={id:GiftCore.id(),kind:'bulk-payment',state:'invoice_created',address:addr,sats,bolt11,paymentHash:GiftCore.invoicePaymentHash(bolt11),lnbitsUrl:conn.url,ownerWalletId:wallet.id,createdAt:new Date().toISOString()};
+          row.paymentId=record.id;
+        }
+        const alreadyPaid=record.state==='verified';
+        await GiftIssuance.transfer(bulkLedger,record,{
+          pay:(invoice,amount)=>payInvoice(invoice,conn.url,conn.key,amount),
+          payment:hash=>GiftCore.request(conn.url+'/api/v1/payments/'+encodeURIComponent(hash),{headers:{'X-Api-Key':conn.key}})
+        });
+        row.status='ok';row.statusText=`✓ ${sats.toLocaleString()} sats`;
+        log(`<span class="log-ok">✅ [${escHtml(addr)}] Paid ${sats.toLocaleString()} sats</span>`);
+        if(!alreadyPaid) {
+          try {recordSuccessfulPayment(addr,sats);} catch {log('<span class="log-dim">送金済み。アドレス帳への保存には失敗しました。</span>');}
+        }
+      } catch(err) {
+        row.status=row.paymentId?'pending':'fail';
+        row.statusText=row.paymentId?'未確認 · 再押下で照合のみ':err.message.slice(0,60);
+        log(`<span class="log-fail">[${escHtml(addr)}] ${escHtml(err.message)}</span>`);
+        // Stop the batch after an ambiguous payment. Never request a new invoice for it.
+        if(row.paymentId) throw err;
+      }
+      renderRows();
+    }
+    if(restored) log('<span class="log-info">復元した送金だけを照合しました。未送金の行を送るには内容を確認して再度 Send All を押してください。</span>');
+  });} catch(err) {toast(err.message,'error');log(`<span class="log-fail">停止: ${escHtml(err.message)}</span>`);}
+  finally {
+    const ok=rows.filter(r=>r.status==='ok'),failed=rows.filter(r=>r.status==='fail').length,pending=rows.filter(r=>r.paymentId&&r.status==='pending').length;
+    const sent=ok.reduce((sum,r)=>sum+Number(r.sats),0);
+    $('count-ok').textContent=ok.length;$('count-fail').textContent=failed;$('sats-sent').textContent=sent.toLocaleString();$('summary-chips').style.display='flex';
+    log(`<span class="log-info">${ok.length} paid, ${failed} failed, ${pending} 未確認, ${sent.toLocaleString()} sats confirmed.</span>`);
+    sending=false;updateSendBtn();renderRows();
   }
-
-  log(`<span class="log-info">──────────────────────────────</span>`);
-  log(`<span class="log-info">Done — ${okCount} paid, ${failCount} failed, ${satsSent.toLocaleString()} sats sent.</span>`);
-
-  $('count-ok').textContent   = okCount;
-  $('count-fail').textContent = failCount;
-  $('sats-sent').textContent  = satsSent.toLocaleString();
-  $('summary-chips').style.display = 'flex';
-
-  toast(`${okCount} paid, ${failCount} failed`, okCount > 0 ? 'success' : 'error');
-  if (walletSats !== null) checkBalance();
-
-  sending = false;
-  updateSendBtn();
-  renderRows();
 }
 
 // ── Reset / Clear ──────────────────────────────────────────────
 function resetStatuses() {
-  rows.forEach(r => { r.status = 'idle'; r.statusText = '—'; });
+  if(sending) return;
+  rows.filter(r=>!r.paymentId).forEach(r => { r.status = 'idle'; r.statusText = '—'; });
   renderRows(); updateSendBtn();
   $('summary-chips').style.display = 'none';
   $('progress-log').innerHTML = '';
 }
 
 function clearAll() {
+  if(sending || rows.some(r=>r.paymentId && r.status==='pending')) {toast('未確認の送金を先に照合してください。','error');return;}
   if (rows.length === 0) return;
   if (!confirm('Remove all recipients?')) return;
   rows = []; rowCounter = 0;
@@ -991,7 +1005,7 @@ function toggleKeyVis() {
 }
 
 // ── Boot ───────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', async function () {
   loadSettings();
   renderAddressBook();
   renderSnapshots();
@@ -1013,8 +1027,9 @@ document.addEventListener('DOMContentLoaded', function () {
   $('load-snap-btn').addEventListener('click', loadSnapshot);
   $('del-snap-btn').addEventListener('click', deleteSnapshot);
 
-  // Start with 3 empty rows
-  addRow(); addRow(); addRow();
+  try {await restorePendingPayments();} catch(e) {toast('送金記録を読み込めません: '+e.message,'error');}
+  if(!rows.length) {addRow();addRow();addRow();}
+  renderRows();updateTotals();updateSendBtn();
 });
 </script>
 </body>

@@ -1,123 +1,102 @@
-# ⚡ Lightning QR Drop
+# Lightning Gift
 
-A static web app that generates **one-time LNURL-withdraw QR codes** allowing random recipients to claim a fixed amount of satoshis from your Lightning Network wallet. After each successful claim, a new QR auto-regenerates for the next recipient. You control how many recipients receive sats.
+A static web app for issuing LNURL-withdraw links and funded prepaid wallet URLs with LNbits, displaying sequential withdrawal QR codes, and sending payments to Lightning addresses. Issuance and payment recovery are handled on the issuer's side; recipients still use their QR/LNURL or wallet URL as before.
 
----
+A [Japanese change summary](IMPROVEMENTS-ja.md) is also available.
 
-## ✅ Completed Features
+## Pages
 
-- **Setup Panel**: Configure LNbits URL, API key, sats amount, number of recipients, and QR expiry time
-- **LNbits Connection Test**: Verify your wallet connection and see balance before launching
-- **One-Time QR Codes**: Each QR is a unique LNURL-withdraw link with `uses=1` — claimed only once
-- **Auto-Regeneration**: After each successful claim (or expiry), a new QR is automatically generated
-- **Round Counter**: Specify exactly how many recipients (QR regenerations) you want
-- **Countdown Timer**: Each QR expires after a configurable time; visual countdown with urgent color change
-- **Recipient Log**: Full table showing each round's status (claimed / expired / pending), timestamp, and pseudonymous recipient ID
-- **Blocked Fingerprints**: Ephemeral recipient IDs are logged to prevent re-scanning
-- **Session Persistence**: Sessions and scan logs are saved to the table database
-- **Complete Panel**: End-of-session summary with total sats sent, recipients, and full log
-- **Config Persistence**: LNbits settings saved to `localStorage` for convenience
-- **Copy LNURL**: Fallback copy button for the raw LNURL string
+| Path | Purpose |
+| --- | --- |
+| `/generate-links.html` | Create up to 3,000 LNURL-withdraw links and export a verified batch to CSV |
+| `/prepaid-card.html` | Create and fund up to 30,000 prepaid-card wallet URLs and export a verified batch to CSV |
+| `/index.html` | Display one-time LNURL withdrawal QR codes in sequence |
+| `/bulk-send.html` | Send payments to multiple Lightning addresses |
+| `/how-it-works.html` | Original interactive explanation of the payment flow |
 
----
+Email delivery and writing URLs to physical cards are outside this app's scope.
 
-## 🔧 How It Works
+## Run locally
 
-### Technology Stack
-| Layer | Tech |
-|---|---|
-| Lightning Integration | [LNbits](https://lnbits.com) LNURL-withdraw extension REST API |
-| QR Rendering | [QRCode.js](https://github.com/davidshimjs/qrcodejs) via jsDelivr CDN |
-| Data Persistence | Genspark Table API (session + recipient logs) |
-| Styling | Custom CSS with CSS variables, Inter + JetBrains Mono fonts |
+No Node package installation is required. From the project directory, run:
 
-### Flow
-```
-User configures settings
-      ↓
-POST /withdraw/api/v1/links → creates LNURL-withdraw (1 use, fixed amount)
-      ↓
-QR Code displayed on screen
-      ↓
-Recipient scans with Lightning wallet → claims sats
-      ↓
-Poll GET /withdraw/api/v1/links/{id} every 3s until used=true
-      ↓
-Log recipient ID → auto-generate next QR
-      ↓
-Repeat until all rounds complete
+```sh
+python3 -m http.server 8765 --bind 127.0.0.1
 ```
 
----
+Open `http://127.0.0.1:8765/`. This server only serves static files; LNbits must run separately. The original `lnbits_api.py` is an API example that can perform real operations, not the server used to launch this app.
 
-## 🚀 Entry Points
+## Connect to LNbits
 
-| Path | Description |
-|---|---|
-| `/index.html` | Main app — setup, active drop, complete screen |
-| `/how-it-works.html` | Interactive payment flow illustration — architecture, animated step flow, anti-double-dip deep dive, LNURL anatomy, sequence diagram, API reference |
+- Enter your LNbits HTTPS URL and the source wallet's Admin API key. HTTP is permitted only for localhost.
+- Enable the Withdraw extension to create withdrawal links.
+- Configure LNbits to allow CORS requests from the app's origin.
+- Enter the management key each time you open a page. The key is sent directly to the configured LNbits instance.
+- Prepaid cards currently create wallets belonging to the same LNbits user. **This repository does not guarantee authorization isolation between cards. Verify that isolation on the actual LNbits deployment before distributing cards in production.**
 
----
+The public withdrawal page is served by the LNbits Withdraw extension. Its language support is controlled by that deployment, independently of this app's language settings.
 
-## ⚙️ Setup Requirements
+## Batch issuance and recovery
 
-### You Need
-1. A **LNbits wallet** — self-hosted or on `legend.lnbits.com`
-2. The **LNURL-withdraw extension** enabled in your LNbits wallet
-3. Your **LNbits Admin API key** (not Invoice key — Admin key needed to create withdraw links)
-4. Enough sats in your wallet to cover: `amount × number_of_recipients`
+The app checks the LNbits instance and source wallet, then stores batch and item IDs in browser IndexedDB before wallet creation, link creation, or payment. Tables display 100 records per page rather than rendering 30,000 rows at once.
 
-### Steps
-1. Open LNbits → your wallet → Extensions → Enable **LNURL-withdraw**
-2. Go to API Info → copy your **Admin key**
-3. Paste URL + Admin key into the setup panel
-4. Click "Test Connection" to verify
-5. Set your sats amount + number of recipients
-6. Click **Launch QR Drop Session**
+The pause control stops after the current item finishes. To resume, reopen the same page URL in the same browser, enter the original connection and management key, select the batch, and use the resume control (`未完了分を再開`). Creating a new batch creates separate records.
 
----
+After an ambiguous payment response, recovery checks the original payment without resubmitting it. Ambiguous wallet or link creation is not automatically repeated either; reconcile the saved IDs and names with LNbits before proceeding.
 
-## 📦 Data Models
+Storage failures stop processing. The Web Locks API prevents simultaneous wallet operations across tabs. A browser supporting both Web Locks and IndexedDB is required.
 
-### `withdraw_sessions` table
-| Field | Type | Description |
-|---|---|---|
-| id | text | UUID session identifier |
-| sats_amount | number | Sats per withdrawal |
-| total_rounds | number | Number of QR regenerations |
-| current_round | number | Current progress |
-| status | text | active / completed / paused |
-| lnbits_url | text | LNbits instance URL |
-| created_at_human | text | Human-readable creation time |
+## Bulk payment recovery
 
-### `scan_recipients` table
-| Field | Type | Description |
-|---|---|---|
-| id | text | UUID record ID |
-| session_id | text | Parent session reference |
-| round_number | number | Which round this was |
-| fingerprint_hash | text | Pseudonymous recipient identifier |
-| lnurl_withdraw_id | text | LNbits link ID |
-| status | text | pending / withdrawn / expired |
-| scanned_at | text | ISO timestamp |
-| withdrawn_at | text | ISO timestamp |
+Before sending, the app saves the invoice and its payment hash in IndexedDB. It reports success only after LNbits confirms the payment. An ambiguous result stops the remaining payments in the batch.
 
----
+Reopening the same page URL in the same browser restores unresolved payments. Enter the original server and wallet's Admin key, then click **Send to All** to check them. Unresolved payments are checked using their original hashes; the app does not request replacement invoices or send them again. If another tab's unresolved payment is discovered during submission, that click only reconciles existing payments.
 
-## ⚠️ Known Limitations
+Completed rows are not sent again after another click or **Reset Statuses**. For an intentional new payment, remove a completed row and add the recipient again. Unresolved rows cannot be removed until reconciliation succeeds. If the page closed after saving but before submitting a payment, or LNbits reports failure, the app still does not automatically resubmit; inspect the original payment in LNbits.
 
-- **CORS**: LNbits must have CORS enabled (all public LNbits instances do; self-hosted may need `--allowed-hosts`)
-- **Recipient Deduplication**: The current fingerprinting is ephemeral (time-based ID per round). It logs *who claimed each round* but cannot prevent someone with multiple wallets from scanning different rounds. For stronger deduplication, a backend would be needed to hash scanner IPs.
-- **Polling**: The app polls the LNbits API every 3 seconds. Webhooks would be more efficient but require a server endpoint.
-- **No multi-device sync**: The active QR session only lives in the browser that launched it.
+Card top-ups, balance checks, and CSV exports reload the latest stored card record before acting. A stale tab cannot overwrite another tab's unresolved top-up or reactivate a card recorded as deactivated.
 
----
+## CSV exports
 
-## 🔜 Recommended Next Steps
+The app rechecks every record in the selected batch before exporting. If any record is invalid, the whole export stops instead of silently reducing the row count. CSVs use a UTF-8 BOM and escape quotes, newlines, and values that spreadsheet software could interpret as formulas.
 
-1. **Webhook support**: Add a server-side webhook receiver to get instant payment notifications
-2. **IP-based blocking**: Use a proxy/backend to hash scanner IPs for stronger deduplication
-3. **Multiple active QRs**: Display N QRs simultaneously, each for a different recipient
-4. **Sound effects**: Play a chime when a claim is confirmed
-5. **Export log**: CSV download of the full session log
-6. **QR Branding**: Overlay a custom logo on the QR code center
+- LNURL: `batch_id, distribution_id, link_id, title, claim_url, lnurl, sats, status`
+- Prepaid cards: `batch_id, card_id, name, wallet_id, access_url, amount_sats, status, verified_at`
+
+For LNURL records, `claim_url` is the distribution URL returned by LNbits. Verify its browser behavior and how your email or distribution system handles LNURLs on the actual deployment. For prepaid cards, `access_url` is the corresponding wallet URL.
+
+CSV files do not include Admin or Invoice keys. Prepaid CSV exports require the full intended funded balance to remain. Spent cards can still be managed but cannot be exported again as newly funded cards.
+
+## Browser storage
+
+The source wallet's Admin key stays in memory, and legacy copies in localStorage are removed at startup. Created card wallet IDs, access URLs, per-card keys, and payment reconciliation IDs are stored in IndexedDB for recovery and management. Bulk payment records store invoice and reconciliation data without API keys. This is browser storage, not a server backup.
+
+Storage is separate for `localhost`, `127.0.0.1`, different ports, and different browsers. Recovery after browser-data deletion or device loss is not implemented. Keep exported CSVs separately and treat them as sensitive: possession of an access URL may allow spending funds.
+
+Legacy `prepaid_cards` records are migrated without deleting their original copy and are excluded from CSV exports until reverified.
+
+## Verification
+
+Run the Node.js standard-library tests:
+
+```sh
+node --test tests/*.test.cjs
+```
+
+The 34 tests use synthetic APIs and no real funds. They cover storage failures, recovery, duplicate-payment prevention, amount checks, malformed shared data, connection and wallet mismatches, CSV validation, and simulated batches of 30,000 cards and 3,000 links. Simulated throughput does not establish real-server performance or authorization isolation.
+
+Chrome checks with mocked APIs and real browser IndexedDB also covered bulk-payment response loss, reload recovery, reconciliation and repeated submission; stale-tab top-up reconciliation and completion feedback; deactivation protection; and cross-tab Web Locks. These checks do not replace real LNbits compatibility tests or comprehensive testing across all pages and browsers.
+
+QR and ZIP libraries are bundled locally; see their [sources, licenses, and SHA-256 hashes](js/vendor/README.md).
+
+Before production use, verify real LNbits compatibility, small-value transactions, card-to-card authorization isolation, server load, and recovery/backup procedures.
+
+## API references
+
+These official sources informed the implementation. Validate differences against the LNbits and Withdraw versions deployed on your server.
+
+- [LNbits payments API](https://github.com/lnbits/lnbits/blob/main/lnbits/core/views/payment_api.py)
+- [Withdraw API](https://github.com/lnbits/withdraw/blob/main/views_api.py)
+- [Withdraw data models](https://github.com/lnbits/withdraw/blob/main/models.py)
+- [BOLT11 invoice encoding](https://github.com/lightning/bolts/blob/master/11-payment-encoding.md)
+- [LNURL payRequest specification](https://github.com/lnurl/luds/blob/luds/06.md)
