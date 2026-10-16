@@ -68,7 +68,7 @@ const i18n = (() => {
 
       // Section: LNbits Connection
       section_lnbits: 'LNbits Connection',
-      section_lnbits_desc: 'Connect your <a href="https://lnbits.com" target="_blank">LNbits</a> wallet to fund withdrawals. Your API key is stored locally and never sent to any server except your LNbits instance.',
+      section_lnbits_desc: 'Connect your <a href="https://lnbits.com" target="_blank">LNbits</a> wallet to fund withdrawals. Your API key is kept only while this page is open and never sent to any server except your LNbits instance.',
       label_lnbits_url: 'LNbits Instance URL',
       hint_lnbits_url: 'Use the public demo or your own self-hosted instance',
       placeholder_lnbits_url: 'https://legend.lnbits.com',
@@ -217,7 +217,7 @@ const i18n = (() => {
       s0_msg1_title: 'Configure the Drop',
       s0_msg1_body: 'You set: <code>amount = 1000 sats</code>, <code>recipients = 5</code>, <code>expiry = 10 min</code>. Your LNbits Admin key is entered — it stays in your browser and is only sent directly to your LNbits instance.',
       s0_msg2_title: 'API Key Never Leaves Your Control',
-      s0_msg2_body: 'The key is stored in <code>localStorage</code> and used only for direct API calls to your LNbits URL. It is never proxied through any third-party server.',
+      s0_msg2_body: 'The key is kept in memory while this page is open and used for direct API calls to your LNbits URL. It is never proxied through any third-party server.',
       s0_caption_title: 'Step 1 — Configure & Connect',
       s0_caption_body: 'You set the drop parameters. The app validates your LNbits connection and checks your wallet balance to ensure you have enough sats to fund all rounds.',
 
@@ -425,7 +425,7 @@ const i18n = (() => {
       app_subtitle: '1回のスキャンでランダムな受取人にサットを送ろう',
 
       section_lnbits: 'LNbits 接続設定',
-      section_lnbits_desc: '<a href="https://lnbits.com" target="_blank">LNbits</a> ウォレットを接続して引き出しに資金を提供します。APIキーはローカルに保存され、LNbitsインスタンス以外のサーバーには送信されません。',
+      section_lnbits_desc: '<a href="https://lnbits.com" target="_blank">LNbits</a> ウォレットを接続して引き出しに資金を提供します。APIキーはページを開いている間だけ保持され、LNbitsインスタンス以外のサーバーには送信されません。',
       label_lnbits_url: 'LNbits インスタンス URL',
       hint_lnbits_url: '公開デモまたは自分でホストしたインスタンスを使用してください',
       placeholder_lnbits_url: 'https://legend.lnbits.com',
@@ -558,7 +558,7 @@ const i18n = (() => {
       s0_msg1_title: 'ドロップを設定',
       s0_msg1_body: '設定内容：<code>金額 = 1000 sats</code>、<code>受取人数 = 5</code>、<code>有効期限 = 10分</code>。LNbits Adminキーを入力します — キーはブラウザに保存され、LNbitsインスタンスにのみ直接送信されます。',
       s0_msg2_title: 'APIキーは常にあなたのコントロール下',
-      s0_msg2_body: 'キーは<code>localStorage</code>に保存され、LNbits URLへの直接APIコールにのみ使用されます。サードパーティのサーバーを経由することは一切ありません。',
+      s0_msg2_body: 'キーはこのページを開いている間だけメモリーに保持し、LNbits URLへの直接APIコールに使用します。サードパーティのサーバーを経由することは一切ありません。',
       s0_caption_title: 'ステップ1 — 設定と接続',
       s0_caption_body: 'ドロップパラメータを設定します。アプリがLNbits接続を検証し、全ラウンドを賄うのに十分なサットがあるかウォレット残高を確認します。',
 
@@ -833,6 +833,9 @@ const State = {
 };
 
 const $ = id => document.getElementById(id);
+function lnbitsFetch(url,options={}) {
+  return fetch(GiftCore.httpUrl(url),{...options,redirect:'error',signal:options.signal||AbortSignal.timeout(20000)});
+}
 
 // Re-apply dynamic strings when language changes
 document.addEventListener('langchange', () => {
@@ -853,12 +856,13 @@ document.addEventListener('langchange', () => {
 
 // ─── Config persistence ───────────────────────────────────────────────────────
 function loadSavedConfig() {
+  GiftCore.clearLegacyKey(localStorage);
   const saved = localStorage.getItem('lnqr_config');
   if (saved) {
     try {
       const cfg = JSON.parse(saved);
       if (cfg.lnbitsUrl)     $('lnbits-url').value    = cfg.lnbitsUrl;
-      if (cfg.apiKey)        $('api-key').value        = cfg.apiKey;
+
       if (cfg.walletId)      $('wallet-id').value      = cfg.walletId;
       if (cfg.satsAmount)    $('sats-amount').value    = cfg.satsAmount;
       if (cfg.totalRounds)   $('total-rounds').value   = cfg.totalRounds;
@@ -875,7 +879,6 @@ function loadSavedConfig() {
 function saveConfig() {
   localStorage.setItem('lnqr_config', JSON.stringify({
     lnbitsUrl:     $('lnbits-url').value.trim(),
-    apiKey:        $('api-key').value.trim(),
     walletId:      $('wallet-id').value.trim(),
     satsAmount:    parseInt($('sats-amount').value),
     totalRounds:   parseInt($('total-rounds').value),
@@ -929,7 +932,7 @@ function setLang(l) {
 
 // ─── Test connection ──────────────────────────────────────────────────────────
 async function testConnection() {
-  const url    = $('lnbits-url').value.trim().replace(/\/$/, '');
+  let url      = $('lnbits-url').value.trim().replace(/\/$/, '');
   const apiKey = $('api-key').value.trim();
   const badge  = $('connection-status');
 
@@ -944,7 +947,8 @@ async function testConnection() {
   badge.className = 'status-badge hidden';
 
   try {
-    const res = await fetch(`${url}/api/v1/wallet`, {
+    url=GiftCore.serverUrl(url);
+    const res = await lnbitsFetch(`${url}/api/v1/wallet`, {
       headers: { 'X-Api-Key': apiKey }
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -968,7 +972,7 @@ function showStatusBadge(el, type, msg) {
 }
 
 async function testWithdrawExtension() {
-  const url    = $('lnbits-url').value.trim().replace(/\/$/, '');
+  let url      = $('lnbits-url').value.trim().replace(/\/$/, '');
   const apiKey = $('api-key').value.trim();
   const badge  = $('connection-status');
   const diag   = $('diag-box');
@@ -977,6 +981,7 @@ async function testWithdrawExtension() {
     showStatusBadge(badge, 'error', '⚠️ Enter LNbits URL and API key first');
     return;
   }
+  try{url=GiftCore.serverUrl(url);}catch(e){showStatusBadge(badge,'error',e.message);return;}
 
   const btn = $('test-withdraw-btn');
   btn.disabled = true;
@@ -985,7 +990,7 @@ async function testWithdrawExtension() {
 
   let diagText = `⚡ Withdraw Extension Diagnostic\n`;
   diagText += `URL: ${url}\n`;
-  diagText += `Key: ${apiKey.slice(0,8)}…${apiKey.slice(-4)}\n`;
+  diagText += `Key: [hidden]\n`;
   diagText += `${'─'.repeat(56)}\n\n`;
   diagText += `Checking ${WITHDRAW_BASES(url).length} known endpoint paths…\n\n`;
 
@@ -1000,7 +1005,7 @@ async function testWithdrawExtension() {
     diag.textContent = diagText;
 
     try {
-      const res  = await fetch(ep, { headers: { 'X-Api-Key': apiKey } });
+      const res  = await lnbitsFetch(ep, { headers: { 'X-Api-Key': apiKey } });
       const body = await res.text();
       diagText += `  HTTP ${res.status}`;
 
@@ -1051,7 +1056,7 @@ async function testWithdrawExtension() {
   diag.textContent = diagText;
 
   try {
-    const res = await fetch(postEp, {
+    const res = await lnbitsFetch(postEp, {
       method: 'POST',
       headers: { 'X-Api-Key': apiKey, 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -1073,7 +1078,7 @@ async function testWithdrawExtension() {
           diagText += `All returned fields: ${JSON.stringify(parsed).slice(0,300)}\n`;
         }
         if (parsed.id) {
-          await fetch(`${foundBase}/links/${parsed.id}`, { method: 'DELETE', headers: { 'X-Api-Key': apiKey } }).catch(()=>{});
+          await lnbitsFetch(`${foundBase}/links/${encodeURIComponent(parsed.id)}`, { method: 'DELETE', headers: { 'X-Api-Key': apiKey } }).catch(()=>{});
           diagText += `🗑️ Test link deleted\n`;
         }
       }
@@ -1114,6 +1119,7 @@ async function handleLaunch(e) {
   if (!cfg.apiKey)                             { toast(i18n.t('toast_launch_no_key'), 'error'); return; }
   if (!cfg.satsAmount || cfg.satsAmount < 1)   { toast(i18n.t('toast_launch_bad_amount'), 'error'); return; }
   if (!cfg.totalRounds || cfg.totalRounds < 1) { toast(i18n.t('toast_launch_bad_rounds'), 'error'); return; }
+  try{cfg.lnbitsUrl=GiftCore.serverUrl(cfg.lnbitsUrl);}catch(e){toast(e.message,'error');return;}
 
   State.config = cfg;
   console.log('[Launch] pollIntervalSec =', cfg.pollIntervalSec, '| claimMode =', cfg.claimMode);
@@ -1253,16 +1259,7 @@ const WITHDRAW_BASES = (url) => [
   `${url}/api/v1/extensions/lnurlw/api/v1`,
 ];
 
-const WITHDRAW_PAYLOADS = (sats, title) => {
-  const msats = sats * 1000;
-  return [
-    { title, min_withdrawable: sats, max_withdrawable: sats, uses: 1, wait_time: 1, is_unique: true },
-    { title, min_withdrawable: sats, max_withdrawable: sats, uses: 1, wait_time: 1 },
-    { title, min_withdrawable: sats, max_withdrawable: sats, uses: 1, wait_time: 1, is_unique: true, use_once: true },
-    { title, min_withdrawable: msats, max_withdrawable: msats, uses: 1, wait_time: 1, is_unique: true },
-    { title, min_withdrawable: msats, max_withdrawable: msats, uses: 1, wait_time: 1 },
-  ];
-};
+const WITHDRAW_PAYLOADS = (sats,title) => [{title,min_withdrawable:GiftCore.integer(sats),max_withdrawable:GiftCore.integer(sats),uses:1,wait_time:1,is_unique:true}];
 
 async function createLnurlWithdraw(round) {
   const { lnbitsUrl, apiKey, satsAmount, sessionName } = State.config;
@@ -1277,7 +1274,7 @@ async function createLnurlWithdraw(round) {
 
     let baseReachable = false;
     try {
-      const probe = await fetch(endpoint, { headers: { 'X-Api-Key': apiKey } });
+      const probe = await lnbitsFetch(endpoint, { headers: { 'X-Api-Key': apiKey } });
       console.log(`[LNbits] GET ${endpoint} → ${probe.status}`);
       if (probe.status === 404) {
         attempts.push(`GET ${endpoint} → 404 (skipping)`);
@@ -1300,7 +1297,7 @@ async function createLnurlWithdraw(round) {
     for (const payload of payloads) {
       try {
         console.log(`[LNbits] POST ${endpoint}`, payload);
-        const res  = await fetch(endpoint, {
+        const res  = await lnbitsFetch(endpoint, {
           method: 'POST',
           headers: { 'X-Api-Key': apiKey, 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
@@ -1326,7 +1323,7 @@ async function createLnurlWithdraw(round) {
         if (!rawLnurl && data.id) {
           console.log('[LNbits] lnurl missing in POST, trying GET /links/' + data.id);
           try {
-            const gr = await fetch(`${base}/links/${data.id}`, { headers: { 'X-Api-Key': apiKey } });
+            const gr = await lnbitsFetch(`${base}/links/${encodeURIComponent(data.id)}`, { headers: { 'X-Api-Key': apiKey } });
             if (gr.ok) {
               const gd = await gr.json();
               console.log('[LNbits] GET link fields:', Object.keys(gd));
@@ -1441,7 +1438,7 @@ function getWithdrawApiBase() {
 async function checkLnurlStatus(linkId) {
   const { apiKey } = State.config;
   const base = getWithdrawApiBase();
-  const res = await fetch(`${base}/links/${linkId}`, {
+  const res = await lnbitsFetch(`${base}/links/${encodeURIComponent(linkId)}`, {
     headers: { 'X-Api-Key': apiKey },
   });
 
@@ -1455,20 +1452,15 @@ async function checkLnurlStatus(linkId) {
 }
 
 async function deleteLnurlLink(linkId) {
-  const { apiKey } = State.config;
-  const base = getWithdrawApiBase();
-  try {
-    await fetch(`${base}/links/${linkId}`, {
-      method: 'DELETE',
-      headers: { 'X-Api-Key': apiKey },
-    });
-  } catch (e) {}
+  const {apiKey}=State.config;
+  const response=await lnbitsFetch(getWithdrawApiBase()+'/links/'+encodeURIComponent(linkId),{method:'DELETE',headers:{'X-Api-Key':apiKey}});
+  if(!response.ok && response.status!==404)throw new Error('リンクの失効を確認できません (HTTP '+response.status+')');
 }
 
 // ─── Wallet balance helper ────────────────────────────────────────────────────
 async function fetchWalletBalance() {
   const { lnbitsUrl, apiKey } = State.config;
-  const res = await fetch(`${lnbitsUrl}/api/v1/wallet`, {
+  const res = await lnbitsFetch(`${lnbitsUrl}/api/v1/wallet`, {
     headers: { 'X-Api-Key': apiKey },
   });
   if (!res.ok) throw new Error(`wallet fetch ${res.status}`);
@@ -1718,7 +1710,8 @@ async function onExpired() {
   if (State.session._lastExpiredRound === round) return;
   State.session._lastExpiredRound = round;
   State.session.expiredCount++;
-  if (State.session.currentLinkId) await deleteLnurlLink(State.session.currentLinkId);
+  try {if(State.session.currentLinkId)await deleteLnurlLink(State.session.currentLinkId);}
+  catch(e){State.session.expiredCount--;$('qr-status-text').textContent='失効未確認です。終了ボタンで再試行してください。';toast(e.message,'error');return;}
   updateLogEntry(round, 'expired', '—', '—');
   showQrState('expired');
   setStatusDot('done');
@@ -1776,11 +1769,12 @@ function showCompletePanel() {
 
 function startNewSession() { showPanel('setup-panel'); }
 
-function endSession() {
+async function endSession() {
   if (!confirm(i18n.t('confirm_end_session'))) return;
   clearInterval(State.pollInterval);
   clearInterval(State.countdownInterval);
-  if (State.session.currentLinkId) deleteLnurlLink(State.session.currentLinkId);
+  try {if(State.session.currentLinkId)await deleteLnurlLink(State.session.currentLinkId);}
+  catch(e){toast(e.message,'error');$('qr-status-text').textContent='失効未確認です。終了を再試行してください。';return;}
   State.session.active = false;
   showCompletePanel();
 }
@@ -1924,7 +1918,8 @@ function toast(msg, type = 'info', duration = 4000) {
   const div = document.createElement('div');
   div.className = `toast ${type}`;
   const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : type === 'warning' ? '⚠️' : 'ℹ️';
-  div.innerHTML = `<span>${icon}</span><span>${msg}</span>`;
+  div.innerHTML = `<span>${icon}</span>`;
+  const text=document.createElement('span');text.textContent=msg;div.appendChild(text);
   container.appendChild(div);
   setTimeout(() => {
     div.style.transition = 'all 0.3s ease';

@@ -195,7 +195,7 @@ const i18n = (() => {
       s0_msg1_title: 'Configure the Drop',
       s0_msg1_body: 'You set: <code>amount = 1000 sats</code>, <code>recipients = 5</code>, <code>expiry = 10 min</code>. Your LNbits Admin key is entered — it stays in your browser and is only sent directly to your LNbits instance.',
       s0_msg2_title: 'API Key Never Leaves Your Control',
-      s0_msg2_body: 'The key is stored in <code>localStorage</code> and used only for direct API calls to your LNbits URL. It is never proxied through any third-party server.',
+      s0_msg2_body: 'The key is kept in memory while this page is open and used for direct API calls to your LNbits URL. It is never proxied through any third-party server.',
       s0_caption_title: 'Step 1 — Configure & Connect',
       s0_caption_body: 'You set the drop parameters. The app validates your LNbits connection and checks your wallet balance to ensure you have enough sats to fund all rounds.',
 
@@ -533,7 +533,7 @@ const i18n = (() => {
       s0_msg1_title: 'ドロップを設定',
       s0_msg1_body: '設定内容：<code>金額 = 1000 sats</code>、<code>受取人数 = 5</code>、<code>有効期限 = 10分</code>。LNbits Adminキーを入力します — キーはブラウザに保存され、LNbitsインスタンスにのみ直接送信されます。',
       s0_msg2_title: 'APIキーは常にあなたのコントロール下',
-      s0_msg2_body: 'キーは<code>localStorage</code>に保存され、LNbits URLへの直接APIコールにのみ使用されます。サードパーティのサーバーを経由することは一切ありません。',
+      s0_msg2_body: 'キーはページを開いている間だけメモリーに保持し、LNbits URLへの直接APIコールに使用します。サードパーティのサーバーを経由することは一切ありません。',
       s0_caption_title: 'ステップ1 — 設定と接続',
       s0_caption_body: 'ドロップパラメータを設定します。アプリがLNbits接続を検証し、全ラウンドを賄うのに十分なサットがあるかウォレット残高を確認します。',
 
